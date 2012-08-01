@@ -60,11 +60,6 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     $config = CRM_Core_Config::singleton();
     $error = array();
     
-/*     require_once("stripe-php/lib/Stripe.php");
-    Stripe::setApiKey($this->_paymentProcessor['user_name']);
-    $stripe_plan = Stripe_Plan::retrieve('something');
-    CRM_Core_Error::debug('plan', $stripe_plan);*/
-    
     if (empty($this->_paymentProcessor['user_name'])) {
       $error[] = ts('The "Secret Key" is not set in the Stripe Payment Processor settings.');
     }

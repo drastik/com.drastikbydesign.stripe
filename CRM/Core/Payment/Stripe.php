@@ -92,7 +92,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     }
     $cc_name .= $params['last_name'];
 
-    //Stripe amount provided as cents.
+    //Stripe amount required in cents.
     $amount = $params['amount'] * 100;
     //It would require 3 digits after the decimal for one to make it this far, CiviCRM prevents this, but let's be redundant.
     $amount = number_format($amount, 0, '', '');
@@ -116,6 +116,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       //'address_country' => $params['country']
     );
     
+    //Create a new Customer in Stripe
     if(!isset($customer_query_res)) {
       $new_stripe_customer = Stripe_Customer::create(array(
   		'description' => 'Donor from CiviCRM',
@@ -123,6 +124,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
         'email' => $email,
       ));
       
+      //Store the relationship between CiviCRM's email address for the Contact & Stripe's Customer ID
       if(isset($new_stripe_customer)) {
         $stripe_customer_id = $new_stripe_customer->id;
         $new_customer_insert = "INSERT INTO civicrm_stripe_customers (email, id) VALUES ('$email', '$stripe_customer_id')";
@@ -134,10 +136,10 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
         $stripe_customer_id = $customer_query_res;
       } else {
         /*
-        Silent error.  
-        Email the admin that they have a customer entered in civicrm_stripe_customers DB table that don't exist in their Stripe account. 
+         * Silent error.  
+         * Email the admin that they somehow have a customer entered in civicrm_stripe_customers DB table that doesn't exist in their Stripe account. 
         */
-        $mail_msg = "You have a customer ($email) entered in civicrm_stripe_customers DB table that don't exist in your Stripe account.  They have been successfully charged, but it won't be assigned to a 'Customer' within Stripe.  To resolve this, either delete the entry in the database, or edit it and update with their current Stripe Customer ID.";
+        $mail_msg = "You have a customer ($email) entered in civicrm_stripe_customers DB table that doesn't exist in your Stripe account.  They have been successfully charged, but it won't be assigned to a 'Customer' within Stripe.  To resolve this, either delete the entry in the database, or edit it and update with their current Stripe Customer ID.";
         $mail_params = array(
   		  'from' => 'jwjoshuawalker@gmail.com',
   		  'toEmail' => 'jwjoshuawalker@gmail.com',
@@ -145,7 +147,8 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
   		  'text' => $mail_msg,
   		  'html' => $mail_msg
         );
-    CRM_Utils_Mail::send($mail_params);
+        
+        CRM_Utils_Mail::send($mail_params);
       }
     }
     
@@ -163,6 +166,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       $stripe_charge['card'] = $card_details;
     }
     
+    //Handle recurring payments in doRecurPayment().
     if (CRM_Utils_Array::value('is_recur', $params) && $params['contributionRecurID']) {
       return $this->doRecurPayment($params, $amount, $stripe_customer_id, $card_details);
     }
@@ -183,11 +187,12 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     $stripe_plan_query_res = CRM_Core_DAO::singleValueQuery($stripe_plan_query);
     
     if(!isset($stripe_plan_query_res)) {
+      $formatted_amount =  "$" . number_format(($amount / 100), 2);
       //Create a new Plan
       $stripe_plan = Stripe_Plan::create(array( 
       	"amount" => $amount,
       	"interval" => $frequency,
-      	"name" => "CiviCRM $frequency" . 'ly ' . $amount,
+      	"name" => "CiviCRM $frequency" . 'ly ' . $formatted_amount,
       	"currency" => "usd",
       	"id" => $plan_id));
       $new_plan_insert = "INSERT INTO civicrm_stripe_plans (plan_id) VALUES ('$plan_id')";

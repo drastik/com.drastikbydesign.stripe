@@ -127,8 +127,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       //Store the relationship between CiviCRM's email address for the Contact & Stripe's Customer ID
       if(isset($stripe_customer)) {
         $stripe_customer_id = $stripe_customer->id;
-        $new_customer_insert = "INSERT INTO civicrm_stripe_customers (email, id) VALUES ('$email', '$stripe_customer_id')";
-        CRM_Core_DAO::executeQuery($new_customer_insert);
+        CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_customers (email, id) VALUES ('$email', '$stripe_customer_id')");
       } else {
         CRM_Core_Error::fatal(ts('There was an error saving new customer within Stripe.  Is Stripe down?'));
       }
@@ -149,9 +148,8 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
         //Store the relationship between CiviCRM's email address for the Contact & Stripe's Customer ID
         if(isset($stripe_customer)) {
           $stripe_customer_id = $stripe_customer->id;
-          $new_customer_insert = "DELETE FROM civicrm_stripe_customers WHERE email = '$email'";
-          $new_customer_insert = "INSERT INTO civicrm_stripe_customers (email, id) VALUES ('$email', '$stripe_customer_id')";
-          CRM_Core_DAO::executeQuery($new_customer_insert);
+          CRM_Core_DAO::executeQuery("DELETE FROM civicrm_stripe_customers WHERE email = '$email'");
+          CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_customers (email, id) VALUES ('$email', '$stripe_customer_id')");
         } else {
           CRM_Core_Error::fatal(ts('There was an error saving new customer within Stripe.  Is Stripe down?'));
         }

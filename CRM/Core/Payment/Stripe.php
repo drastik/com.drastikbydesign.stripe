@@ -46,7 +46,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       $processorName = $paymentProcessor['name'];
       if (self::$_singleton[$processorName] === NULL ) {
           self::$_singleton[$processorName] = new CRM_Core_Payment_Stripe($mode, $paymentProcessor);
-      }
+      } 
       return self::$_singleton[$processorName];
   }
  
@@ -118,37 +118,42 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     
     //Create a new Customer in Stripe
     if(!isset($customer_query_res)) {
-      $new_stripe_customer = Stripe_Customer::create(array(
+      $stripe_customer = Stripe_Customer::create(array(
   		'description' => 'Donor from CiviCRM',
   		'card' => $card_details,
         'email' => $email,
       ));
       
       //Store the relationship between CiviCRM's email address for the Contact & Stripe's Customer ID
-      if(isset($new_stripe_customer)) {
-        $stripe_customer_id = $new_stripe_customer->id;
+      if(isset($stripe_customer)) {
+        $stripe_customer_id = $stripe_customer->id;
         $new_customer_insert = "INSERT INTO civicrm_stripe_customers (email, id) VALUES ('$email', '$stripe_customer_id')";
         CRM_Core_DAO::executeQuery($new_customer_insert);
+      } else {
+        CRM_Core_Error::fatal(ts('There was an error saving new customer within Stripe.  Is Stripe down?'));
       }
     } else {
-      $existing_stripe_customer = Stripe_Customer::retrieve($customer_query_res);
-      if(!empty($existing_stripe_customer)) {
+      $stripe_customer = Stripe_Customer::retrieve($customer_query_res);
+      if(!empty($stripe_customer)) {
         $stripe_customer_id = $customer_query_res;
+        $stripe_customer->card = $card_details;
+        $stripe_customer->save();
       } else {
-        /*
-         * Silent error.  
-         * Email the admin that they somehow have a customer entered in civicrm_stripe_customers DB table that doesn't exist in their Stripe account. 
-        */
-        $mail_msg = "You have a customer ($email) entered in civicrm_stripe_customers DB table that doesn't exist in your Stripe account.  They have been successfully charged, but it won't be assigned to a 'Customer' within Stripe.  To resolve this, either delete the entry in the database, or edit it and update with their current Stripe Customer ID.";
-        $mail_params = array(
-  		  'from' => 'jwjoshuawalker@gmail.com',
-  		  'toEmail' => 'jwjoshuawalker@gmail.com',
-  		  'subject' => 'NEW STRIPE CUSTOMER',
-  		  'text' => $mail_msg,
-  		  'html' => $mail_msg
-        );
+        $stripe_customer = Stripe_Customer::create(array(
+  		  'description' => 'Donor from CiviCRM',
+  		  'card' => $card_details,
+          'email' => $email,
+        ));
         
-        CRM_Utils_Mail::send($mail_params);
+        //Somehow a customer ID saved in the system no longer pairs with a Customer within Stripe.  (Perhaps deleted using Stripe interface?) 
+        //Store the relationship between CiviCRM's email address for the Contact & Stripe's Customer ID
+        if(isset($stripe_customer)) {
+          $stripe_customer_id = $stripe_customer->id;
+          $new_customer_insert = "INSERT INTO civicrm_stripe_customers (email, id) VALUES ('$email', '$stripe_customer_id')";
+          CRM_Core_DAO::executeQuery($new_customer_insert);
+        } else {
+          CRM_Core_Error::fatal(ts('There was an error saving new customer within Stripe.  Is Stripe down?'));
+        }
       }
     }
     
@@ -156,7 +161,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     $stripe_charge = array(
       'amount' => $amount, 
       'currency' => 'usd',
-      'description' => '#CiviCRM Donation Page# ' . $params['description'] .  ' #Invoice ID# ' . $params['invoiceID'],
+      'description' => '# CiviCRM Donation Page # ' . $params['description'] .  ' # Invoice ID # ' . $params['invoiceID'],
     );
 
     //Use Stripe Customer if we have a valid one.  Otherwise just use the card.
@@ -168,9 +173,9 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     
     //Handle recurring payments in doRecurPayment().
     if (CRM_Utils_Array::value('is_recur', $params) && $params['contributionRecurID']) {
-      return $this->doRecurPayment($params, $amount, $stripe_customer_id, $card_details);
+      return $this->doRecurPayment($params, $amount, $stripe_customer, $card_details);
     }
-
+       
     //Fire away!
     $stripe_response = Stripe_Charge::create($stripe_charge);
     $params['trxn_id'] = $stripe_response->id;
@@ -178,7 +183,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     return $params;
   }
   
-  function doRecurPayment(&$params, $amount, $stripe_customer_id, $card_details) {
+  function doRecurPayment(&$params, $amount, $stripe_customer, $card_details) {
     $frequency = $params['frequency_unit'];
     $installments = $params['installments'];
     $plan_id = "$frequency-$amount";
@@ -199,13 +204,12 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       CRM_Core_DAO::executeQuery($new_plan_insert);
     }
     
-    //Get the full Customer object from Stripe and attach the Subscription
-    $stripe_customer = Stripe_Customer::retrieve($stripe_customer_id); 
+    //Attach the Subscription to the Stripe Customer
     $stripe_response = $stripe_customer->updateSubscription(array('prorate' => FALSE, 'plan' => $plan_id, 'card' => $card_details));
     
     //Calculate timestamp for the last installment
     $end_time = strtotime("+$installments $frequency");
-    $new_subscription_insert = "INSERT INTO civicrm_stripe_subscriptions (customer_id, plan_id, end_time) VALUES ('$stripe_customer_id', '$plan_id', '$end_time')";
+    $new_subscription_insert = "INSERT INTO civicrm_stripe_subscriptions (customer_id, plan_id, end_time) VALUES ('$stripe_customer->id', '$plan_id', '$end_time')";
     CRM_Core_DAO::executeQuery($new_subscription_insert);
     
     $params['trxn_id'] = $plan_id . ' ' . $stripe_response->start;

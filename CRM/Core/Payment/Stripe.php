@@ -59,9 +59,13 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
   function checkConfig() {
     $config = CRM_Core_Config::singleton();
     $error = array();
-    
+
     if (empty($this->_paymentProcessor['user_name'])) {
       $error[] = ts('The "Secret Key" is not set in the Stripe Payment Processor settings.');
+    }
+    
+    if (empty($this->_paymentProcessor['password'])) {
+      $error[] = ts('The "Publishable Key" is not set in the Stripe Payment Processor settings.');
     }
  
     if (!empty($error)) {
@@ -85,12 +89,6 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     //Include Stripe library & Set API credentials.
     require_once("stripe-php/lib/Stripe.php");
     Stripe::setApiKey($this->_paymentProcessor['user_name']);
-    
-    $cc_name = $params['first_name'] . " ";
-    if (strlen($params['middle_name']) > 0) {
-      $cc_name .= $params['middle_name'] . " ";
-    }
-    $cc_name .= $params['last_name'];
 
     //Stripe amount required in cents.
     $amount = $params['amount'] * 100;
@@ -98,12 +96,27 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     $amount = number_format($amount, 0, '', '');
 
     //Check for existing customer, create new otherwise.
-    $stripe_customer_id = "";
     $email = $params['email'];
-    $customer_query = "SELECT id FROM civicrm_stripe_customers WHERE email = '$email'";
-    $customer_query_res = CRM_Core_DAO::singleValueQuery($customer_query);
-    
+    $customer_query = CRM_Core_DAO::singleValueQuery("SELECT id FROM civicrm_stripe_customers WHERE email = '$email'");
+
+    //Use Stripe.js instead of raw card details.
+    if(isset($params['stripe_token'])) {
+      $card_details = $params['stripe_token'];
+    } else {
+      CRM_Core_Error::fatal(ts('Stripe.js token was not passed!  Have you turned on the CiviCRM-Stripe CMS module?'));
+    }
+
+    /****
+     * If for some reason you cannot use Stripe.js and you are aware of PCI Compliance issues, here is the alternative to Stripe.js:
+     ****/ 
     //Prepare Card details in advance to use for new Stripe Customer object if we need.
+/*   
+    $cc_name = $params['first_name'] . " ";
+    if (strlen($params['middle_name']) > 0) {
+      $cc_name .= $params['middle_name'] . " ";
+    }
+    $cc_name .= $params['last_name'];
+    
     $card_details = array(
   	  'number' => $params['credit_card_number'], 
   	  'exp_month' => $params['month'], 
@@ -113,28 +126,26 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       'address_line1' => $params['street_address'],
       'address_state' => $params['state_province'],
       'address_zip' => $params['postal_code'],
-      //'address_country' => $params['country']
     );
+    */
     
     //Create a new Customer in Stripe
-    if(!isset($customer_query_res)) {
+    if(!isset($customer_query)) {
       $stripe_customer = Stripe_Customer::create(array(
-  		'description' => 'Donor from CiviCRM',
+  		'description' => 'Payment from CiviCRM',
   		'card' => $card_details,
         'email' => $email,
       ));
       
       //Store the relationship between CiviCRM's email address for the Contact & Stripe's Customer ID
       if(isset($stripe_customer)) {
-        $stripe_customer_id = $stripe_customer->id;
-        CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_customers (email, id) VALUES ('$email', '$stripe_customer_id')");
+        CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_customers (email, id) VALUES ('$email', '$stripe_customer->id')");
       } else {
         CRM_Core_Error::fatal(ts('There was an error saving new customer within Stripe.  Is Stripe down?'));
       }
     } else {
-      $stripe_customer = Stripe_Customer::retrieve($customer_query_res);
+      $stripe_customer = Stripe_Customer::retrieve($customer_query);
       if(!empty($stripe_customer)) {
-        $stripe_customer_id = $customer_query_res;
         $stripe_customer->card = $card_details;
         $stripe_customer->save();
       } else {
@@ -147,9 +158,8 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
         //Somehow a customer ID saved in the system no longer pairs with a Customer within Stripe.  (Perhaps deleted using Stripe interface?) 
         //Store the relationship between CiviCRM's email address for the Contact & Stripe's Customer ID
         if(isset($stripe_customer)) {
-          $stripe_customer_id = $stripe_customer->id;
           CRM_Core_DAO::executeQuery("DELETE FROM civicrm_stripe_customers WHERE email = '$email'");
-          CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_customers (email, id) VALUES ('$email', '$stripe_customer_id')");
+          CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_customers (email, id) VALUES ('$email', '$stripe_customer->id')");
         } else {
           CRM_Core_Error::fatal(ts('There was an error saving new customer within Stripe.  Is Stripe down?'));
         }
@@ -164,15 +174,15 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     );
 
     //Use Stripe Customer if we have a valid one.  Otherwise just use the card.
-    if(!empty($stripe_customer_id)) {
-      $stripe_charge['customer'] = $stripe_customer_id;
+    if(!empty($stripe_customer->id)) {
+      $stripe_charge['customer'] = $stripe_customer->id;
     } else {
       $stripe_charge['card'] = $card_details;
     }
     
     //Handle recurring payments in doRecurPayment().
     if (CRM_Utils_Array::value('is_recur', $params) && $params['contributionRecurID']) {
-      return $this->doRecurPayment($params, $amount, $stripe_customer, $card_details);
+      return $this->doRecurPayment($params, $amount, $stripe_customer);
     }
        
     //Fire away!
@@ -182,15 +192,14 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     return $params;
   }
   
-  function doRecurPayment(&$params, $amount, $stripe_customer, $card_details) {
+  function doRecurPayment(&$params, $amount, $stripe_customer) {
     $frequency = $params['frequency_unit'];
     $installments = $params['installments'];
     $plan_id = "$frequency-$amount";
     
-    $stripe_plan_query = "SELECT plan_id FROM civicrm_stripe_plans WHERE plan_id = '$plan_id'";
-    $stripe_plan_query_res = CRM_Core_DAO::singleValueQuery($stripe_plan_query);
-    
-    if(!isset($stripe_plan_query_res)) {
+    $stripe_plan_query = CRM_Core_DAO::singleValueQuery("SELECT plan_id FROM civicrm_stripe_plans WHERE plan_id = '$plan_id'");
+
+    if(!isset($stripe_plan_query)) {
       $formatted_amount =  "$" . number_format(($amount / 100), 2);
       //Create a new Plan
       $stripe_plan = Stripe_Plan::create(array( 
@@ -199,19 +208,28 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       	"name" => "CiviCRM $frequency" . 'ly ' . $formatted_amount,
       	"currency" => "usd",
       	"id" => $plan_id));
-      $new_plan_insert = "INSERT INTO civicrm_stripe_plans (plan_id) VALUES ('$plan_id')";
-      CRM_Core_DAO::executeQuery($new_plan_insert);
+      CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_plans (plan_id) VALUES ('$plan_id')");
     }
     
     //Attach the Subscription to the Stripe Customer
-    $stripe_response = $stripe_customer->updateSubscription(array('prorate' => FALSE, 'plan' => $plan_id, 'card' => $card_details));
+    $stripe_response = $stripe_customer->updateSubscription(array('prorate' => FALSE, 'plan' => $plan_id));
     
+    $existing_subscription_query = CRM_Core_DAO::singleValueQuery("SELECT invoice_id FROM civicrm_stripe_subscriptions WHERE customer_id = '$stripe_customer->id'");
+    if(!empty($existing_subscription_query)) {
+      //Cancel existing Recurring Contribution in CiviCRM
+      $cancel_date = date("Y-m-d H:i:s");
+      CRM_Core_DAO::executeQuery("UPDATE civicrm_contribution_recur SET cancel_date = '$cancel_date', contribution_status_id = '3' WHERE invoice_id = '$existing_subscription_query'");
+      //Delete the Stripe Subscription from our cron watch list.
+      CRM_Core_DAO::executeQuery("DELETE FROM civicrm_stripe_subscriptions WHERE invoice_id = '$existing_subscription_query'");
+    }
+
     //Calculate timestamp for the last installment
     $end_time = strtotime("+$installments $frequency");
-    $new_subscription_insert = "INSERT INTO civicrm_stripe_subscriptions (customer_id, plan_id, end_time) VALUES ('$stripe_customer->id', '$plan_id', '$end_time')";
-    CRM_Core_DAO::executeQuery($new_subscription_insert);
+    $invoice_id = $params['invoiceID'];
+    CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_subscriptions (customer_id, invoice_id, end_time) VALUES ('$stripe_customer->id', '$invoice_id', '$end_time')");
     
-    $params['trxn_id'] = $plan_id . ' ' . $stripe_response->start;
+    $trxn_id = $stripe_customer->id . '-' . $end_time;
+    $params['trxn_id'] = $trxn_id;
     
     return $params;
   }

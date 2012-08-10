@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS `civicrm_stripe_plans` (
 
 CREATE TABLE IF NOT EXISTS `civicrm_stripe_subscriptions` (
   `customer_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `plan_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `invoice_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `end_time` int(11) NOT NULL DEFAULT '0',
   KEY `end_time` (`end_time`)
 ) DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;

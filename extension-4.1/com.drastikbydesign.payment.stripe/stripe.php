@@ -60,14 +60,42 @@ class com_drastikbydesign_payment_stripe extends CRM_Core_Payment {
     $config = CRM_Core_Config::singleton();
     $error = array();
 
+    //Create database tables if they haven't been.
+    if(!CRM_Core_DAO::checkTableExists('civicrm_stripe_customers')) {
+      CRM_Core_DAO::executeQuery("
+		CREATE TABLE IF NOT EXISTS `civicrm_stripe_customers` (
+  			`email` varchar(64) COLLATE utf8_unicode_ci DEFAULT NULL,
+  			`id` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
+  			UNIQUE KEY `email` (`email`)
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+			");
+      
+      CRM_Core_DAO::executeQuery("
+		CREATE TABLE IF NOT EXISTS `civicrm_stripe_plans` (
+  			`plan_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  			UNIQUE KEY `plan_id` (`plan_id`)
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+		");
+      
+      CRM_Core_DAO::executeQuery("
+		CREATE TABLE IF NOT EXISTS `civicrm_stripe_subscriptions` (
+  			`customer_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  			`invoice_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  			`end_time` int(11) NOT NULL DEFAULT '0',
+  			KEY `end_time` (`end_time`)
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+    	");
+      CRM_Core_Error::debug('Stripe Database tables created.');
+    }
+
     if (empty($this->_paymentProcessor['user_name'])) {
       $error[] = ts('The "Secret Key" is not set in the Stripe Payment Processor settings.');
     }
-    
+
     if (empty($this->_paymentProcessor['password'])) {
       $error[] = ts('The "Publishable Key" is not set in the Stripe Payment Processor settings.');
     }
- 
+
     if (!empty($error)) {
       return implode('<p>', $error);
     }
@@ -75,7 +103,7 @@ class com_drastikbydesign_payment_stripe extends CRM_Core_Payment {
       return NULL;
     }
   }
- 
+
   /*
    * CiviCRM extension install()
    */
@@ -88,21 +116,25 @@ class com_drastikbydesign_payment_stripe extends CRM_Core_Payment {
   			`id` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
   			UNIQUE KEY `email` (`email`)
 			) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-
+			");
+      
+    CRM_Core_DAO::executeQuery("
 		CREATE TABLE IF NOT EXISTS `civicrm_stripe_plans` (
   			`plan_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   			UNIQUE KEY `plan_id` (`plan_id`)
 			) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-
+		");
+      
+    CRM_Core_DAO::executeQuery("
 		CREATE TABLE IF NOT EXISTS `civicrm_stripe_subscriptions` (
-  			`customer_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+			`customer_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   			`invoice_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   			`end_time` int(11) NOT NULL DEFAULT '0',
   			KEY `end_time` (`end_time`)
 			) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-    ");
+    	");
   }
-  
+
   /*
    * CiviCRM extension uninstall()
    */

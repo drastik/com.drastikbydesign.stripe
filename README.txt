@@ -13,11 +13,13 @@ Joomla:  TBD
 WordPress:  TBD
 
 IMPORTANT:
-It appears in CiviCRM 4.1, extensions aren't properly running their install() function so until further notice, you will need to run the .sql file to make sure the database tables get created.  This can be found in the 'source' folder.
-
-In all versions except extension-4.2, you will need to create a cron job in order for recurring contributions to be properly ended.
+In all versions except extension-4.2 (CiviCRM 4.2+):
+-You will need to create a cron job in order for recurring contributions to be properly ended.
 The cron files are the files in the 'extern' folder.  There is one file each for live & test mode and files are named accordingly.
 In CiviCRM 4.2, just make sure you have the correct "Job Scheduler" cron entry.
+
+For Pre-Extension (source) method:
+-You will need to run the .sql file to make sure the database tables get created & Stripe is added as a payment processor option.
 
 ------------
 

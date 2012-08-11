@@ -1,5 +1,5 @@
-﻿INSERT INTO `civicrm_payment_processor_type` (`id`, `name`, `title`, `description`, `is_active`, `is_default`, `user_name_label`, `password_label`, `signature_label`, `subject_label`, `class_name`, `url_site_default`, `url_api_default`, `url_recur_default`, `url_button_default`, `url_site_test_default`, `url_api_test_default`, `url_recur_test_default`, `url_button_test_default`, `billing_mode`, `is_recur`, `payment_type`) VALUES
-(16, 'Stripe', 'Stripe', NULL, 1, NULL, 'Secret Key', 'Publishable Key', NULL, NULL, 'Payment_Stripe', 'https://api.stripe.com/v1', NULL, 'https://api.stripe.com/v1', NULL, 'https://api.stripe.com/v1', NULL, 'https://api.stripe.com/v1', NULL, 1, 1, 1);
+INSERT INTO `civicrm_payment_processor_type` (`id`, `name`, `title`, `description`, `is_active`, `is_default`, `user_name_label`, `password_label`, `signature_label`, `subject_label`, `class_name`, `url_site_default`, `url_api_default`, `url_recur_default`, `url_button_default`, `url_site_test_default`, `url_api_test_default`, `url_recur_test_default`, `url_button_test_default`, `billing_mode`, `is_recur`, `payment_type`) VALUES
+('', 'Stripe', 'Stripe', NULL, 1, NULL, 'Secret Key', 'Publishable Key', NULL, NULL, 'Payment_Stripe', 'https://api.stripe.com/v1', NULL, 'https://api.stripe.com/v1', NULL, 'https://api.stripe.com/v1', NULL, 'https://api.stripe.com/v1', NULL, 1, 1, 1);
 
 
 --

@@ -1,23 +1,70 @@
 ------------
-Important Note:
+Please Read:
 
-This version is for CiviCRM 4.1 and prior.
-It will work for CiviCRM 4.2+ but there will be a new version to utilize all the new features surrounding Payment Processors in CiviCRM 4.2.
-This currently includes everything you need minus a cron file to cancel recurring contributions.  Do not allow recurring just yet!
+There are 3 versions included by directory.  Installation instructions for each further below:
+extension-4.1:  Extension for CiviCRM 4.1 and earlier.
+extension-4.2:  Extension for CiviCRM 4.2 and earlier.
+source:  Pre-extension method, folder structure is in tact, place files accordingly.
+
 
 You also need a corresponding module for your CMS.  Here is where the modules can be found:
 Drupal:  git clone --recursive --branch master http://git.drupal.org/sandbox/drastik/1719796.git civicrm_stripe
 Joomla:  TBD
-WordPress:  TBD 
+WordPress:  TBD
+
+IMPORTANT:
+It appears in CiviCRM 4.1, extensions aren't properly running their install() function so until further notice,
+you will need to run the .sql file to make sure the database tables get created.  This can be found in the 'source' folder.
+
+In all versions except extension-4.2, you will need to create a cron job in order for recurring contributions to be properly ended.
+The cron files are the files in the 'extern' folder.  There is one file each for live & test mode and files are named accordingly.
+In CiviCRM 4.2, just make sure you have the correct "Job Scheduler" cron entry.
 
 ------------
 
-Installing Stripe as a payment processor in CiviCRM 4.x
+Installation Instructions:
 
-Folder structure is left in tact.  
+------------
+
+For CiviCRM 4.2
+extension-4.2 instructions:
+
+Install extension
+
+Place civicrm_templates folder anywhere and inform CiviCRM of your "Custom Templates" location in this admin page:  site.com/civicrm/admin/setting/path
+(custom template soon to be removed as a requirement)
+
+Make sure you have a cron entry for CiviCRM's Job Scheduler!
+
+Copy Stripe's PHP library folder 'stripe-php' to civicrm/packages/stripe-php  
+You can get Stripe's PHP library here: https://github.com/stripe/stripe-php
+
+------------
+
+For CiviCRM 4.1
+extension-4.1 instructions:
+
+Install extension
+
+Place civicrm_templates folder anywhere and inform CiviCRM of your "Custom Templates" location in this admin page:  site.com/civicrm/admin/setting/path
+
+Copy files in extern to your CiviCRM extern folder  "civicrm/extern"
+Make cron entry to hit the file(s) (daily preferred).
+
+Copy Stripe's PHP library folder 'stripe-php' to civicrm/packages/stripe-php  
+You can get Stripe's PHP library here: https://github.com/stripe/stripe-php
+
+------------
+
+Pre-extension instructions:
+
+Folder structure is left in tact.
 Place Stripe.php in civicrm/CRM/Core/Payment/Stripe.php
 
 Place civicrm_templates folder anywhere and inform CiviCRM of your "Custom Templates" location in this admin page:  site.com/civicrm/admin/setting/path
+
+Copy files in extern to your CiviCRM extern folder  "civicrm/extern"
+Make cron entry to hit the file(s) (daily preferred). 
 
 Copy Stripe's PHP library folder 'stripe-php' to civicrm/packages/stripe-php  
 You can get Stripe's PHP library here: https://github.com/stripe/stripe-php
@@ -28,11 +75,5 @@ It will create the required tables:
 civicrm_stripe_customers
 civicrm_stripe_plans
 civicrm_stripe_subscriptions
-
-------------
-Note:
-
-This will be packaged as a "CiviCRM Extension" shortly for an alternative installation method.
-In <CiviCRM 4.2, you will need to create a cron job in order for recurring contributions to be properly ended.
 
 ------------

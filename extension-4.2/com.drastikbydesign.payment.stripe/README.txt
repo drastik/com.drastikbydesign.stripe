@@ -22,7 +22,6 @@ For CiviCRM 4.2:
 Install extension
 
 Place civicrm_templates folder anywhere and inform CiviCRM of your "Custom Templates" location in this admin page:  site.com/civicrm/admin/setting/path
-(custom template soon to be removed as a requirement)
 
 Make sure you have a cron entry for CiviCRM's Job Scheduler!
 

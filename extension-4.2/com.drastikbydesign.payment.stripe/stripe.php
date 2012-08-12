@@ -111,7 +111,7 @@ class com_drastikbydesign_payment_stripe extends CRM_Core_Payment {
 		INSERT INTO civicrm_job (
 			id, domain_id, run_frequency, last_run, name, description, 
 			api_prefix, api_entity, api_action, parameters, is_active
-        ) VALUES (
+        	) VALUES (
 			NULL, %1, 'Daily', NULL, 'Check ending Stripe Recurring Payments', 
 			'End any Stripe recurring payments that have fufilled last installment',
 			'civicrm_api3', 'job', 'run_payment_cron', 'processor_name=Stripe', 1

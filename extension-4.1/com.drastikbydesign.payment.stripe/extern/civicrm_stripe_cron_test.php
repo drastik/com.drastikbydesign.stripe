@@ -19,6 +19,7 @@ $query = "
   SELECT  customer_id, invoice_id 
   FROM    civicrm_stripe_subscriptions 
   WHERE   end_time <= '$time' 
+  AND	  is_live = '0'
 ";
 
 $end_date = date("Y-m-d H:i:s");

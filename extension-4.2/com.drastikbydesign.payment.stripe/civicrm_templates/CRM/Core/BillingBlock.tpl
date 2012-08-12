@@ -57,7 +57,11 @@
 		function stripeResponseHandler(status, response) {		  
 		  if (response.error) {
         	// show the errors on the form
-			cj("form.stripe-payment-form").prepend('<div class="messages crm-error">'
+        	if(cj(".messages.crm-error.stripe-message").length > 0) {
+        		cj(".messages.crm-error.stripe-message").slideUp();
+        		cj(".messages.crm-error.stripe-message").remove();
+        	}
+			cj("form.stripe-payment-form").prepend('<div class="messages crm-error stripe-message">'
 				+'<strong>Payment Error Response:</strong>'
 	   			  +'<ul id="errorList">'
 	         		+'<li>Error: ' + response.error.message + '</li>'

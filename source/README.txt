@@ -1,10 +1,8 @@
 ------------
 Please Read:
 
-There are 3 versions included by directory.  Installation instructions for each further below:
-extension-4.1:  Extension for CiviCRM 4.1 and earlier.
-extension-4.2:  Extension for CiviCRM 4.2.
-source:  Pre-extension method, folder structure is in tact, place files accordingly.
+There are 3 versions of this extension available.  This is:
+source:  Pre-extension method, folder structure is in tact, manually place files accordingly.
 
 
 You also need a corresponding module for your CMS.  Here is where the modules can be found:
@@ -36,11 +34,6 @@ Make cron entry to hit the file(s) (daily preferred).
 Copy Stripe's PHP library folder 'stripe-php' to civicrm/packages/stripe-php  
 You can get Stripe's PHP library here: https://github.com/stripe/stripe-php
 
-Run the included SQL file "civicrm_stripe.sql" to handle the DB-related needs.  It will:  
-Insert Stripe into civicrm_payment_processor_type (makes it available as an option within CiviCRM's payment processor settings)
-It will create the required tables:
-civicrm_stripe_customers
-civicrm_stripe_plans
-civicrm_stripe_subscriptions
+Run the included SQL file "civicrm_stripe.sql" to handle the DB-related needs.
 
 ------------

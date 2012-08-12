@@ -31,5 +31,6 @@ CREATE TABLE IF NOT EXISTS `civicrm_stripe_subscriptions` (
   `customer_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `invoice_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `end_time` int(11) NOT NULL DEFAULT '0',
+  `is_live` tinyint(4) NOT NULL COMMENT 'Whether this is a live or test transaction',
   KEY `end_time` (`end_time`)
-) DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;

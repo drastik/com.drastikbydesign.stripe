@@ -129,11 +129,20 @@ class com_drastikbydesign_payment_stripe extends CRM_Core_Payment {
     CRM_Core_DAO::executeQuery("
 		CREATE TABLE IF NOT EXISTS `civicrm_stripe_subscriptions` (
 			`customer_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  			`invoice_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  			`end_time` int(11) NOT NULL DEFAULT '0',
-  			KEY `end_time` (`end_time`)
+			`invoice_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+			`end_time` int(11) NOT NULL DEFAULT '0',
+			`is_live` tinyint(4) NOT NULL COMMENT 'Whether this is a live or test transaction',
+			KEY `end_time` (`end_time`)
 			) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-    	");
+		");
+    CRM_Core_Error::debug('Stripe Database tables created.');
+  }
+  
+  /*
+   * CiviCRM extension enable()
+   */
+  public function enable() {
+    CRM_Core_Session::setStatus("Stripe Payment Processor Message: <br />Don't forget to create a cron entry for CiviCRM's Job Scheduler so recurring contributions are ended!");
   }
 
   /*
@@ -265,6 +274,13 @@ class com_drastikbydesign_payment_stripe extends CRM_Core_Payment {
   }
   
   function doRecurPayment(&$params, $amount, $stripe_customer) {
+    switch($this->_mode) {
+      case 'test':
+        $transaction_mode = 0;
+        break;
+      case 'live':
+        $transaction_mode = 1;
+    }
     $frequency = $params['frequency_unit'];
     $installments = $params['installments'];
     $plan_id = "$frequency-$amount";
@@ -298,7 +314,7 @@ class com_drastikbydesign_payment_stripe extends CRM_Core_Payment {
     //Calculate timestamp for the last installment
     $end_time = strtotime("+$installments $frequency");
     $invoice_id = $params['invoiceID'];
-    CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_subscriptions (customer_id, invoice_id, end_time) VALUES ('$stripe_customer->id', '$invoice_id', '$end_time')");
+    CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_subscriptions (customer_id, invoice_id, end_time, is_live) VALUES ('$stripe_customer->id', '$invoice_id', '$end_time', '$transaction_mode')");
     
     $trxn_id = $stripe_customer->id . '-' . $end_time;
     $params['trxn_id'] = $trxn_id;

@@ -15,11 +15,10 @@ require_once("packages/stripe-php/lib/Stripe.php");
 Stripe::setApiKey($stripe_key);
 
 $time = time();
-print $time;
 $query = "
-SELECT  customer_id, invoice_id 
-FROM    civicrm_stripe_subscriptions 
-WHERE   end_time <= '$time' 
+  SELECT  customer_id, invoice_id 
+  FROM    civicrm_stripe_subscriptions 
+  WHERE   end_time <= '$time' 
 ";
 
 $end_recur_query = CRM_Core_DAO::executeQuery($query);

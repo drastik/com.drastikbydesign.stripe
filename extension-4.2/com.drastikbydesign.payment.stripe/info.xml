@@ -14,7 +14,7 @@
   <releaseDate>2012-08-11</releaseDate>
   <version>1.0</version>
   <develStage>stable</develStage>
-  <compatibility><ver>4.1</ver></compatibility>
+  <compatibility><ver>4.2</ver></compatibility>
   <comments></comments>
   <typeInfo>
    <userNameLabel>Secret Key</userNameLabel>

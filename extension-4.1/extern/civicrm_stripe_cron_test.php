@@ -21,10 +21,10 @@ $query = "
   WHERE   end_time <= '$time' 
 ";
 
+$end_date = date("Y-m-d H:i:s");
 $end_recur_query = CRM_Core_DAO::executeQuery($query);
 
 while($end_recur_query->fetch()) {
-  $end_date = date("Y-m-d H:i:s");
   $stripe_customer = Stripe_Customer::retrieve($end_recur_query->customer_id);
   if(isset($stripe_customer)) {
     $stripe_customer->cancelSubscription();

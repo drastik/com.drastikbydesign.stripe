@@ -88,7 +88,7 @@ class com_drastikbydesign_payment_stripe extends CRM_Core_Payment {
   			`id` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
   			UNIQUE KEY `email` (`email`)
 			) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-			");
+		");
       
     CRM_Core_DAO::executeQuery("
 		CREATE TABLE IF NOT EXISTS `civicrm_stripe_plans` (
@@ -113,13 +113,21 @@ class com_drastikbydesign_payment_stripe extends CRM_Core_Payment {
         ) VALUES (
 			NULL, %1, 'Daily', NULL, 'Check ending Stripe Recurring Payments', 
 			'End any Stripe recurring payments that have fufilled last installment',
-			'civicrm_api3', 'job', 'run_payment_cron', 'processor_name=Stripe', 0
+			'civicrm_api3', 'job', 'run_payment_cron', 'processor_name=Stripe', 1
                 )
 	", array(
       1 => array(CIVICRM_DOMAIN_ID, 'Integer')
       )
     );
     
+    CRM_Core_Session::setStatus("Stripe Payment Processor Message: <br />Don't forget to create a cron entry for CiviCRM's Job Scheduler so recurring contributions are ended!");
+  }
+
+  /*
+   * CiviCRM extension enable()
+   */
+  public function enable() {
+    CRM_Core_Session::setStatus("Stripe Payment Processor Message: <br />Don't forget to create a cron entry for CiviCRM's Job Scheduler so recurring contributions are ended!");
   }
 
   /*

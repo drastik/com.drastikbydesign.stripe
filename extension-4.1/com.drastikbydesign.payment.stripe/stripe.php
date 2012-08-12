@@ -106,6 +106,7 @@ class com_drastikbydesign_payment_stripe extends CRM_Core_Payment {
 
   /*
    * CiviCRM extension install()
+   * Not functioning in <=CiviCRM 4.1
    */
   public function install() {
     //Create required tables for Stripe
@@ -137,6 +138,7 @@ class com_drastikbydesign_payment_stripe extends CRM_Core_Payment {
 
   /*
    * CiviCRM extension uninstall()
+   * Not functioning in <=CiviCRM 4.1
    */
   public function uninstall() {
     //Remove Stripe tables on uninstall

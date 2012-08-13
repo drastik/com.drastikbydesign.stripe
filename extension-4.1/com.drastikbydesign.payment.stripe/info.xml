@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <extension key="com.drastikbydesign.payment.stripe" type="payment">
+  <downloadUrl>https://github.com/downloads/drastik/civicrm_stripe/com.drastikbydesign.payment.stripe-4.1.zip</downloadUrl>
   <file>stripe</file>
   <name>Stripe</name>
   <description>Stripe Payment Processor</description>

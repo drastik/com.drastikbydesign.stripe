@@ -103,9 +103,7 @@ function stripe_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
  */
 function stripe_civicrm_buildForm($formName, &$form) {
   if(isset($form->_paymentProcessor) && $form->_paymentProcessor['payment_processor_type'] == 'Stripe') {
-    //Reversing these 2 may be part of the solution  /\   \/
     if(!stristr($formName, '_Confirm') && !stristr($formName, '_ThankYou')) {
-      CRM_Core_Resources::singleton()->addScriptUrl('https://js.stripe.com/v1/');
       if(!isset($form->_elementIndex['stripe_token'])) {
         $form->addElement('hidden', 'stripe_token', NULL, array('id'=> 'stripe-token'));
       }

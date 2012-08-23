@@ -9,8 +9,8 @@ Joomla:  TBD
 WordPress:  TBD
 
 IMPORTANT:
--You will need to create a cron job in order for recurring contributions to be properly ended.
-The cron files are the files in the 'extern' folder.  There is one file each for live & test mode and files are named accordingly.
+The Webhook.php file is in the 'extern' folder.  
+You have to make a rule in your Stripe account and enter the path to Webhook.php for recurring charges to end!
 
 ------------
 
@@ -25,7 +25,7 @@ Install extension
 Place civicrm_templates folder anywhere and inform CiviCRM of your "Custom Templates" location in this admin page:  site.com/civicrm/admin/setting/path
 
 Copy files in extern to your CiviCRM extern folder  "civicrm/extern"
-Make cron entry to hit the file(s) (daily preferred).
+Make a rule in your Stripe account and enter the path to Webhook.php
 
 Copy Stripe's PHP library folder 'stripe-php' to civicrm/packages/stripe-php  
 You can get Stripe's PHP library here: https://github.com/stripe/stripe-php

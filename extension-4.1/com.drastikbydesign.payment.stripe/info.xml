@@ -12,8 +12,8 @@
     <author>Joshua Walker (drastik) - Drastik by Design</author>
     <email>admin (at) drastikbydesign.com</email>
   </maintainer>
-  <releaseDate>2012-08-11</releaseDate>
-  <version>1.0</version>
+  <releaseDate>2012-08-23</releaseDate>
+  <version>1.1</version>
   <develStage>stable</develStage>
   <compatibility><ver>4.1</ver></compatibility>
   <comments></comments>

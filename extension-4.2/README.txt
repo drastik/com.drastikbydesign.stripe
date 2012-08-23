@@ -10,7 +10,7 @@ You do not need the CMS module for 4.2
 
 IMPORTANT:
 In 4.2 the Webhook.php file is registered to the path of civicrm/stripe/webhook
-You have to make a rule in your Stripe account and enter the path to Webhook.php for recurring charges to end!
+You have to make a Webhook rule in your Stripe account and enter the path to Webhook.php for recurring charges to end!
 
 ------------
 

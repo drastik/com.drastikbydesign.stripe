@@ -10,7 +10,7 @@ WordPress:  TBD
 
 IMPORTANT:
 The Webhook.php file is in the 'extern' folder.  
-You have to make a rule in your Stripe account and enter the path to Webhook.php for recurring charges to end!
+You have to make a Webhook rule in your Stripe account and enter the path to Webhook.php for recurring charges to end!
 
 ------------
 
@@ -25,7 +25,7 @@ Install extension
 Place civicrm_templates folder anywhere and inform CiviCRM of your "Custom Templates" location in this admin page:  site.com/civicrm/admin/setting/path
 
 Copy files in extern to your CiviCRM extern folder  "civicrm/extern"
-Make a rule in your Stripe account and enter the path to Webhook.php
+Make a Webhook rule in your Stripe account and enter the path to Webhook.php
 
 Copy Stripe's PHP library folder 'stripe-php' to civicrm/packages/stripe-php  
 You can get Stripe's PHP library here: https://github.com/stripe/stripe-php

@@ -19,7 +19,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
     $stripe_key = CRM_Core_DAO::singleValueQuery("SELECT user_name FROM civicrm_payment_processor WHERE payment_processor_type = 'Stripe' AND is_test = '$test_mode'");
     require_once ("packages/stripe-php/lib/Stripe.php");
     Stripe::setApiKey($stripe_key);
-    
+
     //Retrieve Event from Stripe using ID even though we already have the values now.
     //This is for extra security precautions mentioned here: https://stripe.com/docs/webhooks
     $stripe_event_data = Stripe_Event::retrieve($data->id);
@@ -62,6 +62,16 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
         $fee_amount = $charge->fee / 100;
         $net_amount = $total_amount - $fee_amount;
         $transaction_id = $charge->id;
+        $new_invoice_id = $stripe_event_data->data->object->id;
+        if(empty($recur_contrib_query->campaign_id)) {
+          $recur_contrib_query->campaign_id = 'NULL';
+        }
+        
+        $first_contrib_check = CRM_Core_DAO::singleValueQuery("SELECT id FROM civicrm_contribution WHERE invoice_id = '$invoice_id' AND contribution_status_id = '2'");
+        if(!empty($first_contrib_check)) {
+          CRM_Core_DAO::executeQuery("UPDATE civicrm_contribution SET contribution_status_id = '1' WHERE id = '$first_contrib_check'");
+          return;
+        }
         
         //Create this instance of the contribution for accounting in CiviCRM
         CRM_Core_DAO::executeQuery("
@@ -71,8 +81,8 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
         	contribution_recur_id, is_test, contribution_status_id, campaign_id
         	) VALUES (
         	'$recur_contrib_query->contact_id', '$recur_contrib_query->contribution_type_id', '$recur_contrib_query->payment_instrument_id', '$recieve_date', 
-        	'$total_amount', '$fee_amount', '$net_amount', '$transaction_id', '$invoice_id', '$recur_contrib_query->currency', 
-        	'$recur_contrib_query->id', '$recur_contrib_query->is_test', '1', '$recur_contrib_query->campaign_id'
+        	'$total_amount', '$fee_amount', '$net_amount', '$transaction_id', '$new_invoice_id', '$recur_contrib_query->currency', 
+        	'$recur_contrib_query->id', '$recur_contrib_query->is_test', '1', $recur_contrib_query->campaign_id
         	)");
         
           if($time_compare > $end_time) {
@@ -121,6 +131,9 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
         $fee_amount = $charge->fee / 100;
         $net_amount = $total_amount - $fee_amount;
         $transaction_id = $charge->id;
+        if(empty($recur_contrib_query->campaign_id)) {
+          $recur_contrib_query->campaign_id = 'NULL';
+        }
         
         //Create this instance of the contribution for accounting in CiviCRM
         CRM_Core_DAO::executeQuery("
@@ -131,7 +144,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
         	) VALUES (
         	'$recur_contrib_query->contact_id', '$recur_contrib_query->contribution_type_id', '$recur_contrib_query->payment_instrument_id', '$recieve_date', 
         	'$total_amount', '$fee_amount', '$net_amount', '$transaction_id', '$invoice_id', '$recur_contrib_query->currency', 
-        	'$recur_contrib_query->id', '$recur_contrib_query->is_test', '4', '$recur_contrib_query->campaign_id'
+        	'$recur_contrib_query->id', '$recur_contrib_query->is_test', '4', $recur_contrib_query->campaign_id
         	)");
         
 

@@ -27,18 +27,12 @@ Installation Instructions:
 For CiviCRM 4.2
 extension-4.2 instructions:
 
-------------
-4.2 CURRENTLY NOT WORKING
-Stripe.js is not working correctly
-------------
+Install extension
 
 You do not need the CMS module for 4.2
 Copy Stripe's PHP library folder 'stripe-php' to civicrm/packages/stripe-php  
 You can get Stripe's PHP library here: https://github.com/stripe/stripe-php
 
-------------
-4.2 CURRENTLY NOT WORKING
-Stripe.js is not working correctly
 ------------
 
 For CiviCRM 4.1

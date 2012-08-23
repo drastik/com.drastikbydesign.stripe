@@ -27,20 +27,19 @@
 
 <!-- START Stripe -->
   {if $paymentProcessor.payment_processor_type == 'Stripe'}
-  <script type="text/javascript" src="https://js.stripe.com/v1/"> </script>
     <script type="text/javascript">
   	var stripe_publishable_key = '{$paymentProcessor.password}';
   	
 	{literal}
 	  cj(function() {
 		cj(document).ready(function(){
-		  Stripe.setPublishableKey(stripe_publishable_key);
+		  cj.getScript('https://js.stripe.com/v1/', function(){ 
+		 	Stripe.setPublishableKey(stripe_publishable_key);
+		  });
 		  /* 
 		   * Identify the payment form.
 		   * Don't reference by form#id since it changes between payment pages (Contribution / Event / etc).
 		   */
-		   //console.log(Stripe);
-		   console.log(stripe_publishable_key);
 		  cj("#crm-container>form").addClass('stripe-payment-form');
 		  cj("form.stripe-payment-form").unbind('submit');
 		  cj("form.stripe-payment-form").submit(function(event) {

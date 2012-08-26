@@ -1,7 +1,4 @@
 ------------
-4.2 CURRENTLY NOT WORKING
-Stripe.js is not working correctly
-------------
 Please Read:
 There are 3 versions of this extension available.  This is:
 extension-4.2:  Extension for CiviCRM 4.2 and earlier.
@@ -24,8 +21,3 @@ Install extension
 
 Copy Stripe's PHP library folder 'stripe-php' to civicrm/packages/stripe-php  
 You can get Stripe's PHP library here: https://github.com/stripe/stripe-php
-
-------------
-4.2 CURRENTLY NOT WORKING
-Stripe.js is not working correctly
-------------

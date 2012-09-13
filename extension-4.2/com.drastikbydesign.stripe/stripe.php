@@ -102,7 +102,7 @@ function stripe_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
  * @param $form - reference to the form object
  */
 function stripe_civicrm_buildForm($formName, &$form) {
-  if(isset($form->_paymentProcessor) && $form->_paymentProcessor['payment_processor_type'] == 'Stripe') {
+  if(isset($form->_paymentProcessor['payment_processor_type']) && $form->_paymentProcessor['payment_processor_type'] == 'Stripe') {
     if(!stristr($formName, '_Confirm') && !stristr($formName, '_ThankYou')) {
       if(!isset($form->_elementIndex['stripe_token'])) {
         $form->addElement('hidden', 'stripe_token', NULL, array('id'=> 'stripe-token'));
@@ -120,7 +120,7 @@ function stripe_civicrm_buildForm($formName, &$form) {
 function stripe_civicrm_managed(&$entities) {
   $entities[] = array(
   	'module' => 'com.drastikbydesign.stripe',
-  	'name' => 'Stripe', // anything you want; must be unique
+  	'name' => 'Stripe',
   	'entity' => 'PaymentProcessorType',
   	'params' => array(
   	  'version' => 3,
@@ -135,7 +135,7 @@ function stripe_civicrm_managed(&$entities) {
       'url_recur_default' => 'https://api.stripe.com/v1',
       'url_site_test_default' => 'https://api.stripe.com/v1',
       'url_recur_test_default' => 'https://api.stripe.com/v1',
-      'is_recur' => 1,  
+      'is_recur' => 1,
       'payment_type' => 1
     ),
   );

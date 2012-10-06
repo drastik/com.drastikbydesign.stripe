@@ -1,4 +1,4 @@
-<?php 
+<?php
 /*
  * Payment Processor class for Stripe
  */
@@ -12,7 +12,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
    * @static
    */
   static private $_singleton = null;
- 
+
   /**
    * mode of operation: live or test
    *
@@ -20,7 +20,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
    * @static
    */
   static protected $_mode = null;
- 
+
   /**
    * Constructor
    *
@@ -33,7 +33,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     $this->_paymentProcessor = $paymentProcessor;
     $this->_processorName    = ts('Stripe');
   }
- 
+
   /**
    * Singleton function used to manage this object
    *
@@ -47,10 +47,10 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       $processorName = $paymentProcessor['name'];
       if (self::$_singleton[$processorName] === NULL ) {
           self::$_singleton[$processorName] = new self($mode, $paymentProcessor);
-      } 
+      }
       return self::$_singleton[$processorName];
   }
- 
+
   /**
    * This function checks to see if we have the right config values
    *
@@ -60,7 +60,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
   function checkConfig() {
     $config = CRM_Core_Config::singleton();
     $error = array();
-    
+
     if (empty($this->_paymentProcessor['user_name'])) {
       $error[] = ts('The "Secret Key" is not set in the Stripe Payment Processor settings.');
     }
@@ -76,7 +76,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       return NULL;
     }
   }
-  
+
   /**
    * Submit a payment using Stripe's PHP API:
    * https://stripe.com/docs/api?lang=php
@@ -87,6 +87,11 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
    * @public
    */
   function doDirectPayment(&$params) {
+    // Let a $0 transaction pass.
+    if(empty($params['amount']) || $params['amount'] == 0) {
+      return;
+    }
+
     //Include Stripe library & Set API credentials.
     require_once("stripe-php/lib/Stripe.php");
     Stripe::setApiKey($this->_paymentProcessor['user_name']);
@@ -97,7 +102,13 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     $amount = number_format($amount, 0, '', '');
 
     //Check for existing customer, create new otherwise.
-    $email = $params['email'];
+    if(isset($params['email'])) {
+      $email = $params['email'];
+    } elseif(isset($params['email-5'])) {
+      $email = $params['email-5'];
+    } elseif(isset($params['email-Primary'])) {
+      $email = $params['email-Primary'];
+    }
     $customer_query = CRM_Core_DAO::singleValueQuery("SELECT id FROM civicrm_stripe_customers WHERE email = '$email'");
 
     //Use Stripe.js instead of raw card details.
@@ -109,18 +120,18 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
 
     /****
      * If for some reason you cannot use Stripe.js and you are aware of PCI Compliance issues, here is the alternative to Stripe.js:
-     ****/ 
+     ****/
     //Prepare Card details in advance to use for new Stripe Customer object if we need.
-/*   
+/*
     $cc_name = $params['first_name'] . " ";
     if (strlen($params['middle_name']) > 0) {
       $cc_name .= $params['middle_name'] . " ";
     }
     $cc_name .= $params['last_name'];
-    
+
     $card_details = array(
-  	  'number' => $params['credit_card_number'], 
-  	  'exp_month' => $params['month'], 
+  	  'number' => $params['credit_card_number'],
+  	  'exp_month' => $params['month'],
   	  'exp_year' => $params['year'],
       'cvc' => $params['cvv2'],
       'name' => $cc_name,
@@ -129,7 +140,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       'address_zip' => $params['postal_code'],
     );
     */
-    
+
     //Create a new Customer in Stripe
     if(!isset($customer_query)) {
       $stripe_customer = Stripe_Customer::create(array(
@@ -137,7 +148,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
   		'card' => $card_details,
         'email' => $email,
       ));
-      
+
       //Store the relationship between CiviCRM's email address for the Contact & Stripe's Customer ID
       if(isset($stripe_customer)) {
         CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_customers (email, id) VALUES ('$email', '$stripe_customer->id')");
@@ -155,8 +166,8 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
   		  'card' => $card_details,
           'email' => $email,
         ));
-        
-        //Somehow a customer ID saved in the system no longer pairs with a Customer within Stripe.  (Perhaps deleted using Stripe interface?) 
+
+        //Somehow a customer ID saved in the system no longer pairs with a Customer within Stripe.  (Perhaps deleted using Stripe interface?)
         //Store the relationship between CiviCRM's email address for the Contact & Stripe's Customer ID
         if(isset($stripe_customer)) {
           CRM_Core_DAO::executeQuery("DELETE FROM civicrm_stripe_customers WHERE email = '$email'");
@@ -166,10 +177,10 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
         }
       }
     }
-    
+
     //Prepare the charge array, minus Customer/Card details.
     $stripe_charge = array(
-      'amount' => $amount, 
+      'amount' => $amount,
       'currency' => 'usd',
       'description' => '# CiviCRM Donation Page # ' . $params['description'] .  ' # Invoice ID # ' . $params['invoiceID'],
     );
@@ -180,12 +191,12 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     } else {
       $stripe_charge['card'] = $card_details;
     }
-    
+
     //Handle recurring payments in doRecurPayment().
     if (CRM_Utils_Array::value('is_recur', $params) && $params['contributionRecurID']) {
       return $this->doRecurPayment($params, $amount, $stripe_customer);
     }
-       
+
     //Fire away!
     $stripe_response = Stripe_Charge::create($stripe_charge);
     $params['trxn_id'] = $stripe_response->id;
@@ -200,7 +211,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
    * @param  array $params assoc array of input parameters for this transaction
    * @param  int $amount transaction amount in USD cents
    * @param  object $stripe_customer Stripe customer object generated by Stripe API
-   * 
+   *
    * @return array the result in a nice formatted array (or an error object)
    * @public
    */
@@ -215,13 +226,13 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     $frequency = $params['frequency_unit'];
     $installments = $params['installments'];
     $plan_id = "$frequency-$amount";
-    
+
     $stripe_plan_query = CRM_Core_DAO::singleValueQuery("SELECT plan_id FROM civicrm_stripe_plans WHERE plan_id = '$plan_id'");
 
     if(!isset($stripe_plan_query)) {
       $formatted_amount =  "$" . number_format(($amount / 100), 2);
       //Create a new Plan
-      $stripe_plan = Stripe_Plan::create(array( 
+      $stripe_plan = Stripe_Plan::create(array(
       	"amount" => $amount,
       	"interval" => $frequency,
       	"name" => "CiviCRM $frequency" . 'ly ' . $formatted_amount,
@@ -229,10 +240,10 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       	"id" => $plan_id));
       CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_plans (plan_id) VALUES ('$plan_id')");
     }
-    
+
     //Attach the Subscription to the Stripe Customer
     $stripe_response = $stripe_customer->updateSubscription(array('prorate' => FALSE, 'plan' => $plan_id));
-    
+
     $existing_subscription_query = CRM_Core_DAO::singleValueQuery("SELECT invoice_id FROM civicrm_stripe_subscriptions WHERE customer_id = '$stripe_customer->id'");
     if(!empty($existing_subscription_query)) {
       //Cancel existing Recurring Contribution in CiviCRM
@@ -246,12 +257,12 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     $end_time = strtotime("+$installments $frequency");
     $invoice_id = $params['invoiceID'];
     CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_subscriptions (customer_id, invoice_id, end_time, is_live) VALUES ('$stripe_customer->id', '$invoice_id', '$end_time', '$transaction_mode')");
-    
+
     $params['trxn_id'] = $stripe_response->id;
-    
+
     return $params;
   }
- 
+
   /**
    * Transfer method not in use
    *

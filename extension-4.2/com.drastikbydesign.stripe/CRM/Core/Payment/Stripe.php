@@ -92,16 +92,16 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       return;
     }
 
-    //Include Stripe library & Set API credentials.
+    // Include Stripe library & Set API credentials.
     require_once("stripe-php/lib/Stripe.php");
     Stripe::setApiKey($this->_paymentProcessor['user_name']);
 
-    //Stripe amount required in cents.
+    // Stripe amount required in cents.
     $amount = $params['amount'] * 100;
-    //It would require 3 digits after the decimal for one to make it this far, CiviCRM prevents this, but let's be redundant.
+    // It would require 3 digits after the decimal for one to make it this far, CiviCRM prevents this, but let's be redundant.
     $amount = number_format($amount, 0, '', '');
 
-    //Check for existing customer, create new otherwise.
+    // Check for existing customer, create new otherwise.
     if(isset($params['email'])) {
       $email = $params['email'];
     } elseif(isset($params['email-5'])) {
@@ -141,7 +141,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     );
     */
 
-    //Create a new Customer in Stripe
+    // Create a new Customer in Stripe
     if(!isset($customer_query)) {
       $stripe_customer = Stripe_Customer::create(array(
   		'description' => 'Payment from CiviCRM',
@@ -149,7 +149,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
         'email' => $email,
       ));
 
-      //Store the relationship between CiviCRM's email address for the Contact & Stripe's Customer ID
+      // Store the relationship between CiviCRM's email address for the Contact & Stripe's Customer ID
       if(isset($stripe_customer)) {
         CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_customers (email, id) VALUES ('$email', '$stripe_customer->id')");
       } else {
@@ -178,14 +178,14 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       }
     }
 
-    //Prepare the charge array, minus Customer/Card details.
+    // Prepare the charge array, minus Customer/Card details.
     $stripe_charge = array(
       'amount' => $amount,
       'currency' => 'usd',
       'description' => '# CiviCRM Donation Page # ' . $params['description'] .  ' # Invoice ID # ' . $params['invoiceID'],
     );
 
-    //Use Stripe Customer if we have a valid one.  Otherwise just use the card.
+    // Use Stripe Customer if we have a valid one.  Otherwise just use the card.
     if(!empty($stripe_customer->id)) {
       $stripe_charge['customer'] = $stripe_customer->id;
     } else {
@@ -231,7 +231,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
 
     if(!isset($stripe_plan_query)) {
       $formatted_amount =  "$" . number_format(($amount / 100), 2);
-      //Create a new Plan
+      // Create a new Plan.
       $stripe_plan = Stripe_Plan::create(array(
       	"amount" => $amount,
       	"interval" => $frequency,
@@ -241,19 +241,19 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_plans (plan_id) VALUES ('$plan_id')");
     }
 
-    //Attach the Subscription to the Stripe Customer
+    // Attach the Subscription to the Stripe Customer.
     $stripe_response = $stripe_customer->updateSubscription(array('prorate' => FALSE, 'plan' => $plan_id));
 
     $existing_subscription_query = CRM_Core_DAO::singleValueQuery("SELECT invoice_id FROM civicrm_stripe_subscriptions WHERE customer_id = '$stripe_customer->id'");
     if(!empty($existing_subscription_query)) {
-      //Cancel existing Recurring Contribution in CiviCRM
+      // Cancel existing Recurring Contribution in CiviCRM.
       $cancel_date = date("Y-m-d H:i:s");
       CRM_Core_DAO::executeQuery("UPDATE civicrm_contribution_recur SET cancel_date = '$cancel_date', contribution_status_id = '3' WHERE invoice_id = '$existing_subscription_query'");
-      //Delete the Stripe Subscription from our cron watch list.
+      // Delete the Stripe Subscription from our cron watch list.
       CRM_Core_DAO::executeQuery("DELETE FROM civicrm_stripe_subscriptions WHERE invoice_id = '$existing_subscription_query'");
     }
 
-    //Calculate timestamp for the last installment
+    // Calculate timestamp for the last installment.
     $end_time = strtotime("+$installments $frequency");
     $invoice_id = $params['invoiceID'];
     CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_subscriptions (customer_id, invoice_id, end_time, is_live) VALUES ('$stripe_customer->id', '$invoice_id', '$end_time', '$transaction_mode')");

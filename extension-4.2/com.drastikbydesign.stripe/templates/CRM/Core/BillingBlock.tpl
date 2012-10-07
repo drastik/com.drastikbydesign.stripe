@@ -28,50 +28,52 @@
 <!-- START Stripe -->
   {if $paymentProcessor.payment_processor_type == 'Stripe'}
     <script type="text/javascript">
-  	var stripe_publishable_key = '{$paymentProcessor.password}';
-  	
-	{literal}
-	  cj(function() {
-		cj(document).ready(function(){
-		  cj.getScript('https://js.stripe.com/v1/', function(){ 
-		 	Stripe.setPublishableKey(stripe_publishable_key);
-		  });
-		  /* 
-		   * Identify the payment form.
-		   * Don't reference by form#id since it changes between payment pages (Contribution / Event / etc).
-		   */
-		  cj("#crm-container>form").addClass('stripe-payment-form');
-		  cj("form.stripe-payment-form").unbind('submit');
-		  cj("form.stripe-payment-form").submit(function(event) {
-    	    // disable the submit button to prevent repeated clicks
-    	  	cj('form.stripe-payment-form input.form-submit').attr("disabled", "disabled");
+    var stripe_publishable_key = '{$paymentProcessor.password}';
 
-    	 	Stripe.createToken({
-        	  number: cj('#credit_card_number').val(),
-        	  cvc: cj('#cvv2').val(),
-        	  exp_month: cj('#credit_card_exp_date\\[M\\]').val(),
-        	  exp_year: cj('#credit_card_exp_date\\[Y\\]').val()
-    	  	}, stripeResponseHandler);
+  {literal}
+  cj(function() {
+    cj(document).ready(function(){
+      cj.getScript('https://js.stripe.com/v1/', function(){ 
+     	Stripe.setPublishableKey(stripe_publishable_key);
+      });
+      /* 
+       * Identify the payment form.
+       * Don't reference by form#id since it changes between payment pages (Contribution / Event / etc).
+       */
+      cj("#crm-container>form").addClass('stripe-payment-form');
+      cj("form.stripe-payment-form").unbind('submit');
+      cj("form.stripe-payment-form").submit(function(event) {
+          // disable the submit button to prevent repeated clicks
+          cj('form.stripe-payment-form input.form-submit').attr("disabled", "disabled");
+          if(cj(this).find("#priceset input[type='radio']:checked").data('amount') == 0) {
+          return true;
+          }
+         Stripe.createToken({
+            number: cj('#credit_card_number').val(),
+            cvc: cj('#cvv2').val(),
+            exp_month: cj('#credit_card_exp_date\\[M\\]').val(),
+            exp_year: cj('#credit_card_exp_date\\[Y\\]').val()
+         }, stripeResponseHandler);
 
-    	  	// prevent the form from submitting with the default action
-    	  	return false;
-  		  });
-		});
-		
-		//Response from Stripe.createToken.
-		function stripeResponseHandler(status, response) {		  
-		  if (response.error) {
-        	// show the errors on the form
-        	if(cj(".messages.crm-error.stripe-message").length > 0) {
-        		cj(".messages.crm-error.stripe-message").slideUp();
-        		cj(".messages.crm-error.stripe-message").remove();
-        	}
-			cj("form.stripe-payment-form").prepend('<div class="messages crm-error stripe-message">'
-				+'<strong>Payment Error Response:</strong>'
-	   			  +'<ul id="errorList">'
-	         		+'<li>Error: ' + response.error.message + '</li>'
-	   			  +'</ul>'
-   				+'</div>');
+         // Prevent the form from submitting with the default action.
+          return false;
+        });
+    });
+
+    // Response from Stripe.createToken.
+    function stripeResponseHandler(status, response) {		  
+      if (response.error) {
+          // Show the errors on the form.
+          if(cj(".messages.crm-error.stripe-message").length > 0) {
+            cj(".messages.crm-error.stripe-message").slideUp();
+            cj(".messages.crm-error.stripe-message").remove();
+          }
+      cj("form.stripe-payment-form").prepend('<div class="messages crm-error stripe-message">'
+        +'<strong>Payment Error Response:</strong>'
+             +'<ul id="errorList">'
+              +'<li>Error: ' + response.error.message + '</li>'
+             +'</ul>'
+          +'</div>');
 
         	cj('form.stripe-payment-form input.form-submit').removeAttr("disabled");
 
@@ -103,24 +105,24 @@
 			        {ts}If you have a PayPal account, you can click the PayPal button to continue. Otherwise, fill in the credit card and billing information on this form and click <strong>Continue</strong> at the bottom of the page.{/ts}
 				</div>
 			</div>
-			 <div class="crm-section no-label {$form.$expressButtonName.name}-section">
-			    <div class="content description">
-			        {$form.$expressButtonName.html}
-			        <div class="description">Save time. Checkout securely. Pay without sharing your financial information. </div>
-				</div>
-			</div>
+       <div class="crm-section no-label {$form.$expressButtonName.name}-section">
+          <div class="content description">
+              {$form.$expressButtonName.html}
+              <div class="description">Save time. Checkout securely. Pay without sharing your financial information. </div>
+        </div>
+      </div>
             {/if}
 
             {if $paymentProcessor.billing_mode & 1}
                 <div class="crm-section billing_mode-section {if $paymentProcessor.payment_type & 2}direct_debit_info-section{else}credit_card_info-section{/if}">
                    {if $paymentProcessor.payment_type & 2}
                         <div class="crm-section {$form.account_holder.name}-section">
-							<div class="label">{$form.account_holder.label}</div>
+              <div class="label">{$form.account_holder.label}</div>
                             <div class="content">{$form.account_holder.html}</div>
                             <div class="clear"></div>
                         </div>
                         <div class="crm-section {$form.bank_account_number.name}-section">
-							<div class="label">{$form.bank_account_number.label}</div>
+              <div class="label">{$form.bank_account_number.label}</div>
                             <div class="content">{$form.bank_account_number.html}</div>
                             <div class="clear"></div>
                         </div>

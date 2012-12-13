@@ -1,15 +1,19 @@
 <?xml version="1.0"?>
 <extension key="com.drastikbydesign.stripe" type="module">
+  <downloadUrl>http://drastikbydesign.com/files/downloads/com.drastikbydesign.stripe-4.2-1.2.zip</downloadUrl>
   <file>stripe</file>
   <name>Stripe</name>
   <description>Stripe Payment Processor</description>
+  <urls>
+    <url desc="Main Extension Page">http://drastikbydesign.com</url>
+  </urls>
   <license>AGPL</license>
   <maintainer>
     <author>Joshua Walker (drastik) - Drastik by Design</author>
     <email>admin (at) drastikbydesign.com</email>
   </maintainer>
   <releaseDate>2012-08-21</releaseDate>
-  <version>1.1</version>
+  <version>1.2</version>
   <develStage>stable</develStage>
   <compatibility>
     <ver>4.2</ver>

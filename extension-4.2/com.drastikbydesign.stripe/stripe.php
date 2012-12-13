@@ -31,7 +31,7 @@ function stripe_civicrm_install() {
 		UNIQUE KEY `email` (`email`)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 	");
-      
+
   CRM_Core_DAO::executeQuery("
 	CREATE TABLE IF NOT EXISTS `civicrm_stripe_plans` (
 		`plan_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
@@ -63,7 +63,7 @@ function stripe_civicrm_uninstall() {
   CRM_Core_DAO::executeQuery("DROP TABLE civicrm_stripe_customers");
   CRM_Core_DAO::executeQuery("DROP TABLE civicrm_stripe_plans");
   CRM_Core_DAO::executeQuery("DROP TABLE civicrm_stripe_subscriptions");
-    
+
   return _stripe_civix_civicrm_uninstall();
 }
 
@@ -71,7 +71,9 @@ function stripe_civicrm_uninstall() {
  * Implementation of hook_civicrm_enable
  */
 function stripe_civicrm_enable() {
-  CRM_Core_Session::setStatus("Stripe Payment Processor Message: <br />Don't forget to set up Webhooks in Stripe so that recurring contributions are ended! <br />Webhook path to enter in Stripe: <strong>yoursite.com/civicrm/stripe/webhook</strong>");
+  CRM_Core_Session::setStatus("Stripe Payment Processor Message:
+    <br />Don't forget to set up Webhooks in Stripe so that recurring contributions are ended!
+    <br />Webhook path to enter in Stripe: <strong>yoursite.com/civicrm/stripe/webhook</strong>");
   return _stripe_civix_civicrm_enable();
 }
 
@@ -102,7 +104,8 @@ function stripe_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
  * @param $form - reference to the form object
  */
 function stripe_civicrm_buildForm($formName, &$form) {
-  if(isset($form->_paymentProcessor['payment_processor_type']) && $form->_paymentProcessor['payment_processor_type'] == 'Stripe') {
+  if(isset($form->_paymentProcessor['payment_processor_type'])
+    && $form->_paymentProcessor['payment_processor_type'] == 'Stripe') {
     if(!stristr($formName, '_Confirm') && !stristr($formName, '_ThankYou')) {
       if(!isset($form->_elementIndex['stripe_token'])) {
         $form->addElement('hidden', 'stripe_token', NULL, array('id'=> 'stripe-token'));

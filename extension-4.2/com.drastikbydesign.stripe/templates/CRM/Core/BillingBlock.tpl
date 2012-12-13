@@ -28,64 +28,73 @@
 <!-- START Stripe -->
   {if $paymentProcessor.payment_processor_type == 'Stripe'}
     <script type="text/javascript">
-    var stripe_publishable_key = '{$paymentProcessor.password}';
+      var stripe_publishable_key = '{$paymentProcessor.password}';
 
-  {literal}
-  cj(function() {
-    cj(document).ready(function(){
-      cj.getScript('https://js.stripe.com/v1/', function(){ 
-     	Stripe.setPublishableKey(stripe_publishable_key);
-      });
-      /* 
-       * Identify the payment form.
-       * Don't reference by form#id since it changes between payment pages (Contribution / Event / etc).
-       */
-      cj("#crm-container>form").addClass('stripe-payment-form');
-      cj("form.stripe-payment-form").unbind('submit');
-      cj("form.stripe-payment-form").submit(function(event) {
-          // disable the submit button to prevent repeated clicks
-          cj('form.stripe-payment-form input.form-submit').attr("disabled", "disabled");
-          if(cj(this).find("#priceset input[type='radio']:checked").data('amount') == 0) {
-          return true;
+      {literal}
+        cj(function() {
+          cj(document).ready(function() {
+            cj.getScript('https://js.stripe.com/v1/', function() {
+              Stripe.setPublishableKey(stripe_publishable_key);
+            });
+            /*
+             * Identify the payment form.
+             * Don't reference by form#id since it changes between payment pages
+             * (Contribution / Event / etc).
+             */
+            cj("#crm-container>form").addClass('stripe-payment-form');
+            cj("form.stripe-payment-form").unbind('submit');
+            cj("form.stripe-payment-form").submit(function(event) {
+                // Disable the submit button to prevent repeated clicks.
+                cj('form.stripe-payment-form input.form-submit').attr("disabled", "disabled");
+                if(cj(this).find("#priceset input[type='radio']:checked").data('amount') == 0) {
+                return true;
+                }
+               Stripe.createToken({
+                  number: cj('#credit_card_number').val(),
+                  cvc: cj('#cvv2').val(),
+                  exp_month: cj('#credit_card_exp_date\\[M\\]').val(),
+                  exp_year: cj('#credit_card_exp_date\\[Y\\]').val()
+               }, stripeResponseHandler);
+
+                // Membership options are present.  Possibility for a more
+                // creative solution to the 2 token issue though here.
+              /*
+                if(cj(".crm-section.membership_amount-section").length > 0) {
+                }
+              */
+
+               // Prevent the form from submitting with the default action.
+                return false;
+              });
+          });
+
+          // Response from Stripe.createToken.
+          function stripeResponseHandler(status, response) {
+            if (response.error) {
+                // Show the errors on the form.
+                if(cj(".messages.crm-error.stripe-message").length > 0) {
+                  cj(".messages.crm-error.stripe-message").slideUp();
+                  cj(".messages.crm-error.stripe-message").remove();
+                }
+            cj("form.stripe-payment-form").prepend('<div class="messages crm-error stripe-message">'
+              +'<strong>Payment Error Response:</strong>'
+                   +'<ul id="errorList">'
+                    +'<li>Error: ' + response.error.message + '</li>'
+                   +'</ul>'
+                +'</div>');
+
+                cj('form.stripe-payment-form input.form-submit').removeAttr("disabled");
+
+              }
+              else {
+                var token = response['id'];
+                // Update form with the token & submit.
+                cj("input#stripe-token").val(token);
+                cj("form.stripe-payment-form").get(0).submit();
+              }
           }
-         Stripe.createToken({
-            number: cj('#credit_card_number').val(),
-            cvc: cj('#cvv2').val(),
-            exp_month: cj('#credit_card_exp_date\\[M\\]').val(),
-            exp_year: cj('#credit_card_exp_date\\[Y\\]').val()
-         }, stripeResponseHandler);
-
-         // Prevent the form from submitting with the default action.
-          return false;
         });
-    });
-
-    // Response from Stripe.createToken.
-    function stripeResponseHandler(status, response) {		  
-      if (response.error) {
-          // Show the errors on the form.
-          if(cj(".messages.crm-error.stripe-message").length > 0) {
-            cj(".messages.crm-error.stripe-message").slideUp();
-            cj(".messages.crm-error.stripe-message").remove();
-          }
-      cj("form.stripe-payment-form").prepend('<div class="messages crm-error stripe-message">'
-        +'<strong>Payment Error Response:</strong>'
-             +'<ul id="errorList">'
-              +'<li>Error: ' + response.error.message + '</li>'
-             +'</ul>'
-          +'</div>');
-
-        	cj('form.stripe-payment-form input.form-submit').removeAttr("disabled");
-
-    	  } else {
-        	var token = response['id'];
-        	// Update form with the token & submit
-        	cj("input#stripe-token").val(token);
-        	cj("form.stripe-payment-form").get(0).submit();
-    	  }
-		}
-	  });
-    {/literal}
+      {/literal}
     </script>
   {/if}
 <!-- END Stripe -->
@@ -262,14 +271,14 @@ function sameAddress( setValue ) {
       }
       cj(this).val( cj('#' + fieldName ).val() );
     });
-    
+
     var stateId;
     cj('.billing_name_address-section select').each( function( i ){
       orgID = cj(this).attr('id');
       field = orgID.split('-');
       fieldName = field[0].replace('billing_', '');
       fieldNameBase = fieldName.replace('_id', '');
-      if ( field[1] ) { 
+      if ( field[1] ) {
         // this means it is an address field
         if ( addressFields[fieldNameBase] ) {
           fieldName =  fieldNameBase + '-' + addressFields[fieldNameBase];
@@ -282,7 +291,7 @@ function sameAddress( setValue ) {
         stateId = cj('#' + fieldName ).val();
       }
       else {
-        cj(this).val( cj('#' + fieldName ).val() ).change( );   
+        cj(this).val( cj('#' + fieldName ).val() ).change( );
       }
     });
 
@@ -292,7 +301,7 @@ function sameAddress( setValue ) {
       setTimeout(function(){
         cj( 'select[id^="billing_state_province_id"]').val( stateId );
       }, 500);
-    }  
+    }
   }
 }
 {/literal}

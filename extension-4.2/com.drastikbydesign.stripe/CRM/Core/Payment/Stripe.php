@@ -208,11 +208,13 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     $amount = number_format($amount, 0, '', '');
 
     // Get Cardholder's full name.
+    /*
     $cc_name = $params['first_name'] . " ";
     if (strlen($params['middle_name']) > 0) {
       $cc_name .= $params['middle_name'] . " ";
     }
     $cc_name .= $params['last_name'];
+    */
 
     // Check for existing customer, create new otherwise.
     if (isset($params['email'])) {
@@ -271,7 +273,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     // Create a new Customer in Stripe.
     if (!isset($customer_query)) {
       $sc_create_params = array(
-        'name' => $cc_name,
+        //'name' => $cc_name,
         'description' => 'Donor from CiviCRM',
         'card' => $card_details,
         'email' => $email,
@@ -311,7 +313,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       }
       else {
         $sc_create_params = array(
-          'name' => $cc_name,
+          //'name' => $cc_name,
           'description' => 'Donor from CiviCRM',
           'card' => $card_details,
           'email' => $email,

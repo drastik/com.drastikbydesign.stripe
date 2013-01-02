@@ -50,6 +50,8 @@
                 return true;
                 }
                Stripe.createToken({
+                  name: cj('#billing_first_name').val() + ' ' + cj('#billing_last_name').val(),
+                  address_zip: cj("#billing_postal_code-5").val(),
                   number: cj('#credit_card_number').val(),
                   cvc: cj('#cvv2').val(),
                   exp_month: cj('#credit_card_exp_date\\[M\\]').val(),

@@ -475,6 +475,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       3 => array($end_time, 'Timestamp'),
     );
 
+    // Insert the new Stripe Subscription info.
     CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_subscriptions
       (customer_id, invoice_id, end_time, is_live)
       VALUES (%1, %2, %3, '$transaction_mode')", $query_params);

@@ -49,6 +49,12 @@
                 if(cj(this).find("#priceset input[type='radio']:checked").data('amount') == 0) {
                 return true;
                 }
+                // Handle multiple payment options and Stripe not being chosen.
+                if(cj(this).find(".crm-section.payment_processor-section").length > 0) {
+                  if(!cj(this).find("input#stripe-token").length > 0) {
+                    return true;
+                  }
+                }
                Stripe.createToken({
                   name: cj('#billing_first_name').val() + ' ' + cj('#billing_last_name').val(),
                   address_zip: cj("#billing_postal_code-5").val(),
@@ -76,7 +82,7 @@
                 // Show the errors on the form.
                 if(cj(".messages.crm-error.stripe-message").length > 0) {
                   cj(".messages.crm-error.stripe-message").slideUp();
-                  cj(".messages.crm-error.stripe-message").remove();
+                  cj(".messages.crm-error.stripe-message:first").remove();
                 }
             cj("form.stripe-payment-form").prepend('<div class="messages crm-error stripe-message">'
               +'<strong>Payment Error Response:</strong>'

@@ -472,7 +472,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     $query_params = array(
       1 => array($stripe_customer->id, 'String'),
       2 => array($invoice_id, 'String'),
-      3 => array($end_time, 'Timestamp'),
+      3 => array($end_time, 'Integer'),
     );
 
     // Insert the new Stripe Subscription info.

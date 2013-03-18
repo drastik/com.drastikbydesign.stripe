@@ -1,9 +1,0 @@
-<?xml version="1.0"?>
-<menu>
-  <item>
-    <path>civicrm/stripe/webhook</path>
-    <page_callback>CRM_Stripe_Page_Webhook</page_callback>
-    <title>Webhook</title>
-    <access_arguments>make online contributions</access_arguments>
-  </item>
-</menu>

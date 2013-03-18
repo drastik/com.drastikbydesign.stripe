@@ -1,13 +1,13 @@
 ------------
 Please Read:
 
-There are 3 versions included by directory.  Installation instructions for each further below:
-extension-4.1:  Extension for CiviCRM 4.1 and earlier.
-extension-4.2:  Extension for CiviCRM 4.2.
+Versions are now seperated into their own branches.
+4.1-x.x:  Extension for CiviCRM 4.1 and earlier.
+4.2-x.x:  Extension for CiviCRM 4.2.
 source:  Pre-extension method, folder structure is in tact, place files accordingly.
 
 You also need a corresponding module for your CMS (4.2 does not).  Here is where the modules can be found:
-Drupal:  git clone --recursive --branch master http://git.drupal.org/sandbox/drastik/1719796.git civicrm_stripe
+Drupal:  http://drupal.org/project/civicrm_stripe
 Joomla:  TBD
 WordPress:  TBD
 

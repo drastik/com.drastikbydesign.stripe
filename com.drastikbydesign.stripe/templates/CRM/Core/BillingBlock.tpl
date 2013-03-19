@@ -23,13 +23,12 @@
  | see the CiviCRM license FAQ at http://civicrm.org/licensing        |
  +--------------------------------------------------------------------+
 *}
+{crmRegion name="billing-block"}
 {if $form.credit_card_number or $form.bank_account_number}
-
 <!-- START Stripe -->
   {if $paymentProcessor.payment_processor_type == 'Stripe'}
     <script type="text/javascript">
       var stripe_publishable_key = '{$paymentProcessor.password}';
-
       {literal}
         cj(function() {
           cj(document).ready(function() {
@@ -41,65 +40,68 @@
              * Don't reference by form#id since it changes between payment pages
              * (Contribution / Event / etc).
              */
-            cj("#crm-container>form").addClass('stripe-payment-form');
-            cj("form.stripe-payment-form").unbind('submit');
+            cj('#crm-container>form').addClass('stripe-payment-form');
+            cj('form.stripe-payment-form').unbind('submit');
+            // Intercept form submission.
             cj("form.stripe-payment-form").submit(function(event) {
-                // Disable the submit button to prevent repeated clicks.
-                cj('form.stripe-payment-form input.form-submit').attr("disabled", "disabled");
-                if(cj(this).find("#priceset input[type='radio']:checked").data('amount') == 0) {
+              // Disable the submit button to prevent repeated clicks.
+              cj('form.stripe-payment-form input.form-submit').attr("disabled", "disabled");
+              if (cj(this).find("#priceset input[type='radio']:checked").data('amount') == 0) {
                 return true;
+              }
+              // Handle multiple payment options and Stripe not being chosen.
+              if (cj(this).find(".crm-section.payment_processor-section").length > 0) {
+                if (!(cj(this).find('input[name="hidden_processor"]').length > 0)) {
+                  return true;
                 }
-                // Handle multiple payment options and Stripe not being chosen.
-                if(cj(this).find(".crm-section.payment_processor-section").length > 0) {
-                  if(!cj(this).find("input#stripe-token").length > 0) {
-                    return true;
-                  }
-                }
-               Stripe.createToken({
-                  name: cj('#billing_first_name').val() + ' ' + cj('#billing_last_name').val(),
-                  address_zip: cj("#billing_postal_code-5").val(),
-                  number: cj('#credit_card_number').val(),
-                  cvc: cj('#cvv2').val(),
-                  exp_month: cj('#credit_card_exp_date\\[M\\]').val(),
-                  exp_year: cj('#credit_card_exp_date\\[Y\\]').val()
-               }, stripeResponseHandler);
+              }
 
-                // Membership options are present.  Possibility for a more
-                // creative solution to the 2 token issue though here.
-              /*
-                if(cj(".crm-section.membership_amount-section").length > 0) {
-                }
-              */
+              // Handle changes introduced in CiviCRM 4.3.
+              if (cj(this).find('#credit_card_exp_date_M').length > 0) {
+                var cc_month = cj(this).find('#credit_card_exp_date_M').val();
+                var cc_year = cj(this).find('#credit_card_exp_date_Y').val();
+              }
+              else {
+                var cc_month = cj(this).find('#credit_card_exp_date\\[M\\]').val();
+                var cc_year = cj(this).find('#credit_card_exp_date\\[Y\\]').val();
+              }
 
-               // Prevent the form from submitting with the default action.
-                return false;
-              });
+              Stripe.createToken({
+                name: cj('#billing_first_name').val() + ' ' + cj('#billing_last_name').val(),
+                address_zip: cj("#billing_postal_code-5").val(),
+                number: cj('#credit_card_number').val(),
+                cvc: cj('#cvv2').val(),
+                exp_month: cc_month,
+                exp_year: cc_year
+              }, stripeResponseHandler);
+
+             // Prevent the form from submitting with the default action.
+              return false;
+            });
           });
-
           // Response from Stripe.createToken.
           function stripeResponseHandler(status, response) {
             if (response.error) {
-                // Show the errors on the form.
-                if(cj(".messages.crm-error.stripe-message").length > 0) {
-                  cj(".messages.crm-error.stripe-message").slideUp();
-                  cj(".messages.crm-error.stripe-message:first").remove();
-                }
-            cj("form.stripe-payment-form").prepend('<div class="messages crm-error stripe-message">'
-              +'<strong>Payment Error Response:</strong>'
-                   +'<ul id="errorList">'
+              // Show the errors on the form.
+              if (cj(".messages.crm-error.stripe-message").length > 0) {
+                cj(".messages.crm-error.stripe-message").slideUp();
+                cj(".messages.crm-error.stripe-message:first").remove();
+              }
+              cj("form.stripe-payment-form").prepend('<div class="messages crm-error stripe-message">'
+                +'<strong>Payment Error Response:</strong>'
+                  +'<ul id="errorList">'
                     +'<li>Error: ' + response.error.message + '</li>'
-                   +'</ul>'
+                  +'</ul>'
                 +'</div>');
 
-                cj('form.stripe-payment-form input.form-submit').removeAttr("disabled");
-
-              }
-              else {
-                var token = response['id'];
-                // Update form with the token & submit.
-                cj("input#stripe-token").val(token);
-                cj("form.stripe-payment-form").get(0).submit();
-              }
+              cj('form.stripe-payment-form input.form-submit').removeAttr("disabled");
+            }
+            else {
+              var token = response['id'];
+              // Update form with the token & submit.
+              cj("input#stripe-token").val(token);
+              cj("form.stripe-payment-form").get(0).submit();
+            }
           }
         });
       {/literal}
@@ -118,10 +120,10 @@
             </legend>
             {if $paymentProcessor.billing_mode & 2 and !$hidePayPalExpress }
             <div class="crm-section no-label paypal_button_info-section">
-			    <div class="content description">
-			        {ts}If you have a PayPal account, you can click the PayPal button to continue. Otherwise, fill in the credit card and billing information on this form and click <strong>Continue</strong> at the bottom of the page.{/ts}
-				</div>
-			</div>
+          <div class="content description">
+              {ts}If you have a PayPal account, you can click the PayPal button to continue. Otherwise, fill in the credit card and billing information on this form and click <strong>Continue</strong> at the bottom of the page.{/ts}
+        </div>
+      </div>
        <div class="crm-section no-label {$form.$expressButtonName.name}-section">
           <div class="content description">
               {$form.$expressButtonName.html}
@@ -144,103 +146,103 @@
                             <div class="clear"></div>
                         </div>
                         <div class="crm-section {$form.bank_identification_number.name}-section">
-							<div class="label">{$form.bank_identification_number.label}</div>
+              <div class="label">{$form.bank_identification_number.label}</div>
                             <div class="content">{$form.bank_identification_number.html}</div>
                             <div class="clear"></div>
                         </div>
                         <div class="crm-section {$form.bank_name.name}-section">
-							<div class="label">{$form.bank_name.label}</div>
+              <div class="label">{$form.bank_name.label}</div>
                             <div class="content">{$form.bank_name.html}</div>
                             <div class="clear"></div>
                         </div>
                    {else}
-                		<div class="crm-section {$form.credit_card_type.name}-section">
-							<div class="label">{$form.credit_card_type.label}</div>
-                			<div class="content">{$form.credit_card_type.html}</div>
-                			<div class="clear"></div>
-                		</div>
-                		<div class="crm-section {$form.credit_card_number.name}-section">
-							<div class="label">{$form.credit_card_number.label}</div>
-                			<div class="content">{$form.credit_card_number.html}
-                				<div class="description">{ts}Enter numbers only, no spaces or dashes.{/ts}</div>
-                			</div>
-                			<div class="clear"></div>
-                		</div>
-                		<div class="crm-section {$form.cvv2.name}-section">
-							<div class="label">{$form.cvv2.label}</div>
-                			<div class="content">
-                				{$form.cvv2.html}
-                				<img src="{$config->resourceBase}i/mini_cvv2.gif" alt="{ts}Security Code Location on Credit Card{/ts}" style="vertical-align: text-bottom;" />
-                				<div class="description">{ts}Usually the last 3-4 digits in the signature area on the back of the card.{/ts}</div>
-                			</div>
-                			<div class="clear"></div>
-                		</div>
-                		<div class="crm-section {$form.credit_card_exp_date.name}-section">
-							<div class="label">{$form.credit_card_exp_date.label}</div>
-                			<div class="content">{$form.credit_card_exp_date.html}</div>
-                			<div class="clear"></div>
-                		</div>
+                    <div class="crm-section {$form.credit_card_type.name}-section">
+              <div class="label">{$form.credit_card_type.label}</div>
+                      <div class="content">{$form.credit_card_type.html}</div>
+                      <div class="clear"></div>
+                    </div>
+                    <div class="crm-section {$form.credit_card_number.name}-section">
+              <div class="label">{$form.credit_card_number.label}</div>
+                      <div class="content">{$form.credit_card_number.html}
+                        <div class="description">{ts}Enter numbers only, no spaces or dashes.{/ts}</div>
+                      </div>
+                      <div class="clear"></div>
+                    </div>
+                    <div class="crm-section {$form.cvv2.name}-section">
+              <div class="label">{$form.cvv2.label}</div>
+                      <div class="content">
+                        {$form.cvv2.html}
+                        <img src="{$config->resourceBase}i/mini_cvv2.gif" alt="{ts}Security Code Location on Credit Card{/ts}" style="vertical-align: text-bottom;" />
+                        <div class="description">{ts}Usually the last 3-4 digits in the signature area on the back of the card.{/ts}</div>
+                      </div>
+                      <div class="clear"></div>
+                    </div>
+                    <div class="crm-section {$form.credit_card_exp_date.name}-section">
+              <div class="label">{$form.credit_card_exp_date.label}</div>
+                      <div class="content">{$form.credit_card_exp_date.html}</div>
+                      <div class="clear"></div>
+                    </div>
                     {/if}
                 </div>
                 </fieldset>
 
                 <fieldset class="billing_name_address-group">
-                	<legend>{ts}Billing Name and Address{/ts}</legend>
-                	  {if $profileAddressFields}
-                    	<input type="checkbox" id="billingcheckbox" value=0> {ts}Billing Address is same as above{/ts}
+                  <legend>{ts}Billing Name and Address{/ts}</legend>
+                    {if $profileAddressFields}
+                      <input type="checkbox" id="billingcheckbox" value=0> <label for="billingcheckbox">{ts}Billing Address is same as above{/ts}</label>
                     {/if}
                     <div class="crm-section billing_name_address-section">
                         <div class="crm-section billingNameInfo-section">
-                        	<div class="content description">
-                        	  {if $paymentProcessor.payment_type & 2}
-                        	     {ts}Enter the name of the account holder, and the corresponding billing address.{/ts}
-                        	  {else}
-                        	     {ts}Enter the name as shown on your credit or debit card, and the billing address for this card.{/ts}
-                        	  {/if}
-                        	</div>
+                          <div class="content description">
+                            {if $paymentProcessor.payment_type & 2}
+                               {ts}Enter the name of the account holder, and the corresponding billing address.{/ts}
+                            {else}
+                               {ts}Enter the name as shown on your credit or debit card, and the billing address for this card.{/ts}
+                            {/if}
+                          </div>
                         </div>
                         <div class="crm-section {$form.billing_first_name.name}-section">
-							<div class="label">{$form.billing_first_name.label}</div>
+              <div class="label">{$form.billing_first_name.label}</div>
                             <div class="content">{$form.billing_first_name.html}</div>
                             <div class="clear"></div>
                         </div>
                         <div class="crm-section {$form.billing_middle_name.name}-section">
-							<div class="label">{$form.billing_middle_name.label}</div>
+              <div class="label">{$form.billing_middle_name.label}</div>
                             <div class="content">{$form.billing_middle_name.html}</div>
                             <div class="clear"></div>
                         </div>
                         <div class="crm-section {$form.billing_last_name.name}-section">
-							<div class="label">{$form.billing_last_name.label}</div>
+              <div class="label">{$form.billing_last_name.label}</div>
                             <div class="content">{$form.billing_last_name.html}</div>
                             <div class="clear"></div>
                         </div>
                         {assign var=n value=billing_street_address-$bltID}
                         <div class="crm-section {$form.$n.name}-section">
-							<div class="label">{$form.$n.label}</div>
+              <div class="label">{$form.$n.label}</div>
                             <div class="content">{$form.$n.html}</div>
                             <div class="clear"></div>
                         </div>
                         {assign var=n value=billing_city-$bltID}
                         <div class="crm-section {$form.$n.name}-section">
-							<div class="label">{$form.$n.label}</div>
+              <div class="label">{$form.$n.label}</div>
                             <div class="content">{$form.$n.html}</div>
                             <div class="clear"></div>
                         </div>
                         {assign var=n value=billing_country_id-$bltID}
                         <div class="crm-section {$form.$n.name}-section">
-							<div class="label">{$form.$n.label}</div>
+              <div class="label">{$form.$n.label}</div>
                             <div class="content">{$form.$n.html|crmReplace:class:big}</div>
                             <div class="clear"></div>
                         </div>
                         {assign var=n value=billing_state_province_id-$bltID}
                         <div class="crm-section {$form.$n.name}-section">
-							<div class="label">{$form.$n.label}</div>
+              <div class="label">{$form.$n.label}</div>
                             <div class="content">{$form.$n.html|crmReplace:class:big}</div>
                             <div class="clear"></div>
                         </div>
                         {assign var=n value=billing_postal_code-$bltID}
                         <div class="crm-section {$form.$n.name}-section">
-							<div class="label">{$form.$n.label}</div>
+              <div class="label">{$form.$n.label}</div>
                             <div class="content">{$form.$n.html}</div>
                             <div class="clear"></div>
                         </div>
@@ -303,12 +305,12 @@ function sameAddress( setValue ) {
       }
     });
 
-    // now set the state province, we are delaying setdefaults
-    // before onchange takes some time / to load states
+    // now set the state province
+    // after ajax call loads all the states
     if ( stateId ) {
-      setTimeout(function(){
+      cj('select[id^="billing_state_province_id"]').ajaxStop(function() {
         cj( 'select[id^="billing_state_province_id"]').val( stateId );
-      }, 500);
+      });
     }
   }
 }
@@ -316,3 +318,4 @@ function sameAddress( setValue ) {
 </script>
 {/if}
 {/if}
+{/crmRegion}

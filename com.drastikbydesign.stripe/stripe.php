@@ -49,8 +49,6 @@ function stripe_civicrm_install() {
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 	");
 
-  CRM_Core_Session::setStatus("Stripe Payment Processor Message: <br />Don't forget to set up Webhooks in Stripe so that recurring contributions are ended! <br />Webhook path to enter in Stripe: <strong>yoursite.com/civicrm/stripe/webhook</strong>");
-
   return _stripe_civix_civicrm_install();
 }
 
@@ -73,7 +71,9 @@ function stripe_civicrm_uninstall() {
 function stripe_civicrm_enable() {
   CRM_Core_Session::setStatus("Stripe Payment Processor Message:
     <br />Don't forget to set up Webhooks in Stripe so that recurring contributions are ended!
-    <br />Webhook path to enter in Stripe: <strong>yoursite.com/civicrm/stripe/webhook</strong>");
+    <br />Webhook path to enter in Stripe: <strong>yoursite.com/civicrm/stripe/webhook</strong>
+    <br />");
+
   return _stripe_civix_civicrm_enable();
 }
 
@@ -104,11 +104,13 @@ function stripe_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
  * @param $form - reference to the form object
  */
 function stripe_civicrm_buildForm($formName, &$form) {
-  if(isset($form->_paymentProcessor['payment_processor_type'])
+  if (isset($form->_paymentProcessor['payment_processor_type'])
     && $form->_paymentProcessor['payment_processor_type'] == 'Stripe') {
-    if(!stristr($formName, '_Confirm') && !stristr($formName, '_ThankYou')) {
-      if(!isset($form->_elementIndex['stripe_token'])) {
-        $form->addElement('hidden', 'stripe_token', NULL, array('id'=> 'stripe-token'));
+    if (!stristr($formName, '_Confirm') && !stristr($formName, '_ThankYou')) {
+      if (empty($_GET['type'])) {
+        if (!isset($form->_elementIndex['stripe_token'])) {
+          $form->addElement('hidden', 'stripe_token', NULL, array('id'=> 'stripe-token'));
+        }
       }
     }
   }

@@ -3,14 +3,14 @@
 require_once 'stripe.civix.php';
 
 /**
- * Implementation of hook_civicrm_config
+ * Implementation of hook_civicrm_config().
  */
 function stripe_civicrm_config(&$config) {
   _stripe_civix_civicrm_config($config);
 }
 
 /**
- * Implementation of hook_civicrm_xmlMenu
+ * Implementation of hook_civicrm_xmlMenu().
  *
  * @param $files array(string)
  */
@@ -19,44 +19,44 @@ function stripe_civicrm_xmlMenu(&$files) {
 }
 
 /**
- * Implementation of hook_civicrm_install
+ * Implementation of hook_civicrm_install().
  */
 function stripe_civicrm_install() {
-  //Create required tables for Stripe
+  // Create required tables for Stripe.
   require_once "CRM/Core/DAO.php";
   CRM_Core_DAO::executeQuery("
-	CREATE TABLE IF NOT EXISTS `civicrm_stripe_customers` (
-		`email` varchar(64) COLLATE utf8_unicode_ci DEFAULT NULL,
-		`id` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
-		UNIQUE KEY `email` (`email`)
-		) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-	");
+  CREATE TABLE IF NOT EXISTS `civicrm_stripe_customers` (
+    `email` varchar(64) COLLATE utf8_unicode_ci DEFAULT NULL,
+    `id` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
+    UNIQUE KEY `email` (`email`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+  ");
 
   CRM_Core_DAO::executeQuery("
-	CREATE TABLE IF NOT EXISTS `civicrm_stripe_plans` (
-		`plan_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-		UNIQUE KEY `plan_id` (`plan_id`)
-		) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-	");
+  CREATE TABLE IF NOT EXISTS `civicrm_stripe_plans` (
+    `plan_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+    UNIQUE KEY `plan_id` (`plan_id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+  ");
 
   CRM_Core_DAO::executeQuery("
-	CREATE TABLE IF NOT EXISTS `civicrm_stripe_subscriptions` (
-		`customer_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-		`invoice_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-		`end_time` int(11) NOT NULL DEFAULT '0',
-		`is_live` tinyint(4) NOT NULL COMMENT 'Whether this is a live or test transaction',
-		KEY `end_time` (`end_time`)
-		) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-	");
+  CREATE TABLE IF NOT EXISTS `civicrm_stripe_subscriptions` (
+    `customer_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+    `invoice_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+    `end_time` int(11) NOT NULL DEFAULT '0',
+    `is_live` tinyint(4) NOT NULL COMMENT 'Whether this is a live or test transaction',
+    KEY `end_time` (`end_time`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+  ");
 
   return _stripe_civix_civicrm_install();
 }
 
 /**
- * Implementation of hook_civicrm_uninstall
+ * Implementation of hook_civicrm_uninstall().
  */
 function stripe_civicrm_uninstall() {
-  //Remove Stripe tables on uninstall
+  // Remove Stripe tables on uninstall.
   require_once "CRM/Core/DAO.php";
   CRM_Core_DAO::executeQuery("DROP TABLE civicrm_stripe_customers");
   CRM_Core_DAO::executeQuery("DROP TABLE civicrm_stripe_plans");
@@ -66,7 +66,7 @@ function stripe_civicrm_uninstall() {
 }
 
 /**
- * Implementation of hook_civicrm_enable
+ * Implementation of hook_civicrm_enable().
  */
 function stripe_civicrm_enable() {
   CRM_Core_Session::setStatus("Stripe Payment Processor Message:
@@ -78,7 +78,7 @@ function stripe_civicrm_enable() {
 }
 
 /**
- * Implementation of hook_civicrm_disable
+ * Implementation of hook_civicrm_disable().
  */
 function stripe_civicrm_disable() {
   return _stripe_civix_civicrm_disable();
@@ -97,9 +97,9 @@ function stripe_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
   return _stripe_civix_civicrm_upgrade($op, $queue);
 }
 
-
 /**
  * Implementation of hook_civicrm_buildForm().
+ *
  * @param $formName - the name of the form
  * @param $form - reference to the form object
  */
@@ -117,18 +117,18 @@ function stripe_civicrm_buildForm($formName, &$form) {
 }
 
 /**
- * Implementation of hook_civicrm_managed
+ * Implementation of hook_civicrm_managed().
  *
  * Generate a list of entities to create/deactivate/delete when this module
  * is installed, disabled, uninstalled.
  */
 function stripe_civicrm_managed(&$entities) {
   $entities[] = array(
-  	'module' => 'com.drastikbydesign.stripe',
-  	'name' => 'Stripe',
-  	'entity' => 'PaymentProcessorType',
-  	'params' => array(
-  	  'version' => 3,
+    'module' => 'com.drastikbydesign.stripe',
+    'name' => 'Stripe',
+    'entity' => 'PaymentProcessorType',
+    'params' => array(
+      'version' => 3,
       'name' => 'Stripe',
       'title' => 'Stripe',
       'description' => 'Stripe Payment Processor',
@@ -136,7 +136,7 @@ function stripe_civicrm_managed(&$entities) {
       'billing_mode' => 'form',
       'user_name_label' => 'Secret Key',
       'password_label' => 'Publishable Key',
-  	  'url_site_default'=> 'https://api.stripe.com/v1',
+      'url_site_default'=> 'https://api.stripe.com/v1',
       'url_recur_default' => 'https://api.stripe.com/v1',
       'url_site_test_default' => 'https://api.stripe.com/v1',
       'url_recur_test_default' => 'https://api.stripe.com/v1',
@@ -144,5 +144,6 @@ function stripe_civicrm_managed(&$entities) {
       'payment_type' => 1
     ),
   );
+
   return _stripe_civix_civicrm_managed($entities);
 }

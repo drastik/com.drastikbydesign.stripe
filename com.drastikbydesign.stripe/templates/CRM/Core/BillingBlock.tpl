@@ -90,6 +90,7 @@
           // Response from Stripe.createToken.
           function stripeResponseHandler(status, response) {
             if (response.error) {
+              cj('html, body').animate({ scrollTop: 0 }, 300);
               // Show the errors on the form.
               if (cj(".messages.crm-error.stripe-message").length > 0) {
                 cj(".messages.crm-error.stripe-message").slideUp();

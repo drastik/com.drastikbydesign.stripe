@@ -5,7 +5,7 @@ There are 3 versions of this extension available.  This is:
 You do not need the CMS module for 4.3
 
 IMPORTANT:
---------
+---------
 In 4.3 the Webhook.php file is registered to the path of civicrm/stripe/webhook
 You have to make a Webhook rule in your Stripe account and enter the path to Webhook.php for recurring charges to end!
 

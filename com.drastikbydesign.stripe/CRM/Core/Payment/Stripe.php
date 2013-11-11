@@ -433,6 +433,19 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
         VALUES (%1)", $query_params);
     }
 
+    // If a contact/customer has an existing active recurring 
+    // contribution/subscription, Stripe will update the existing subscription.
+    // If only the amount has changed not the installments/frequency, Stripe
+    // will not charge the card again until the next installment is due. This
+    // does not work well for CiviCRM, since CiviCRM creates a new recurring
+    // contribution along with a new initial contribution, so it expects the 
+    // card to be charged immediately.  So, since Stripe only supports one 
+    // subscription per customer, we have to cancel the existing active
+    // subscription first.
+    if (!empty($stripe_customer->subscription) && $stripe_customer->subscription-> status == 'active') {
+      $stripe_customer->cancelSubscription();
+    }
+
     // Attach the Subscription to the Stripe Customer.
     $stripe_response = $stripe_customer->updateSubscription(array(
       'prorate' => FALSE, 'plan' => $plan_id));
@@ -472,13 +485,21 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     $query_params = array(
       1 => array($stripe_customer->id, 'String'),
       2 => array($invoice_id, 'String'),
-      3 => array($end_time, 'Integer'),
     );
 
     // Insert the new Stripe Subscription info.
-    CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_subscriptions
-      (customer_id, invoice_id, end_time, is_live)
-      VALUES (%1, %2, %3, '$transaction_mode')", $query_params);
+    // Set end_time to NULL if installments are ongoing indefinitely
+    if (empty($installments)) {
+      CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_subscriptions
+        (customer_id, invoice_id, is_live)
+        VALUES (%1, %2, '$transaction_mode')", $query_params);
+    } else {
+      // Add the end time to the query params.
+      $query_params[3] = array($end_time, 'Integer');
+      CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_subscriptions
+        (customer_id, invoice_id, end_time, is_live)
+        VALUES (%1, %2, %3, '$transaction_mode')", $query_params);
+    }
 
     $params['trxn_id'] = $stripe_response->id;
     $params['fee_amount'] = $stripe_response->fee / 100;

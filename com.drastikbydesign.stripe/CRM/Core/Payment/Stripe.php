@@ -433,6 +433,19 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
         VALUES (%1)", $query_params);
     }
 
+    // If a contact/customer has an existing active recurring 
+    // contribution/subscription, Stripe will update the existing subscription.
+    // If only the amount has changed not the installments/frequency, Stripe
+    // will not charge the card again until the next installment is due. This
+    // does not work well for CiviCRM, since CiviCRM creates a new recurring
+    // contribution along with a new initial contribution, so it expects the 
+    // card to be charged immediately.  So, since Stripe only supports one 
+    // subscription per customer, we have to cancel the existing active
+    // subscription first.
+    if (!empty($stripe_customer->subscription) && $stripe_customer->subscription-> status == 'active') {
+      $stripe_customer->cancelSubscription();
+    }
+
     // Attach the Subscription to the Stripe Customer.
     $stripe_response = $stripe_customer->updateSubscription(array(
       'prorate' => FALSE, 'plan' => $plan_id));

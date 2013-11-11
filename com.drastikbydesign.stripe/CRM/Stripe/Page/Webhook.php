@@ -139,7 +139,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
           %11, %12, '1', %13)",
           $query_params);
 
-          if ($time_compare > $end_time) {
+          if (!empty($end_time) && $time_compare > $end_time) {
             $end_date = date("Y-m-d H:i:s", $end_time);
             // Final payment.  Recurring contribution complete.
             $stripe_customer->cancelSubscription();

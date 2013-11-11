@@ -472,13 +472,21 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     $query_params = array(
       1 => array($stripe_customer->id, 'String'),
       2 => array($invoice_id, 'String'),
-      3 => array($end_time, 'Integer'),
     );
 
     // Insert the new Stripe Subscription info.
-    CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_subscriptions
-      (customer_id, invoice_id, end_time, is_live)
-      VALUES (%1, %2, %3, '$transaction_mode')", $query_params);
+    // Set end_time to NULL if installments are ongoing indefinitely
+    if (empty($installments)) {
+      CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_subscriptions
+        (customer_id, invoice_id, is_live)
+        VALUES (%1, %2, '$transaction_mode')", $query_params);
+    } else {
+      // Add the end time to the query params.
+      $query_params[3] = array($end_time, 'Integer');
+      CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_subscriptions
+        (customer_id, invoice_id, end_time, is_live)
+        VALUES (%1, %2, %3, '$transaction_mode')", $query_params);
+    }
 
     $params['trxn_id'] = $stripe_response->id;
     $params['fee_amount'] = $stripe_response->fee / 100;

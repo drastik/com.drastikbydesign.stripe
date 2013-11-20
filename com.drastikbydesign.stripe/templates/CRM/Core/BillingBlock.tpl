@@ -167,10 +167,7 @@
                     {else}
                         <div class="crm-section {$form.credit_card_type.name}-section">
                              <div class="label">{$form.credit_card_type.label} {$reqMark}</div>
-                             <div class="content">
-                                 {$form.credit_card_type.html}
-                                 <div class="crm-credit_card_type-icons"></div>
-                             </div>
+                             <div class="content">{$form.credit_card_type.html}</div>
                              <div class="clear"></div>
                         </div>
                         <div class="crm-section {$form.credit_card_number.name}-section">
@@ -182,7 +179,7 @@
                             <div class="label">{$form.cvv2.label} {$reqMark}</div>
                             <div class="content">
                                 {$form.cvv2.html}
-                                <span class="cvv2-icon" title="{ts}Usually the last 3-4 digits in the signature area on the back of the card.{/ts}"> </span>
+                                <img src="{$config->resourceBase}i/mini_cvv2.gif" alt="{ts}Usually the last 3-4 digits in the signature area on the back of the card.{/ts}" title="{ts}Usually the last 3-4 digits in the signature area on the back of the card.{/ts}" style="vertical-align: text-bottom;" />
                             </div>
                             <div class="clear"></div>
                         </div>

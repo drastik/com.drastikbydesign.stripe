@@ -89,6 +89,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
   function stripeCatchErrors($op = 'create_customer', &$params, $qfKey = '') {
     // @TODO:  Handle all calls through this using $op switching for sanity.
     // Check for errors before trying to submit.
+    $return = FALSE;
     try {
       switch ($op) {
         case 'create_customer':
@@ -202,9 +203,8 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     Stripe::setApiKey($this->_paymentProcessor['user_name']);
 
     // Stripe amount required in cents.
-    $amount = (int)preg_replace('/[^\d]/', '', strval($params['amount']));
-    // It would require 3 digits after the decimal for one to make it this far.
-    // CiviCRM prevents this, but let's be redundant.
+    $amount = number_format($params['amount'], 2, '.', '');
+    $amount = (int) preg_replace('/[^\d]/', '', strval($amount));
 
     // Get Cardholder's full name.
     /*
@@ -245,7 +245,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
 
     /****
      * If for some reason you cannot use Stripe.js and you are aware of PCI Compliance issues,
-     * here is the alternative to Stripe.js:
+     * here is the alternative to Stripe.js (also need to uncomment lines 211-215 & 275):
      ****/
 
   /*
@@ -370,12 +370,25 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     // Fire away!  Check for errors before trying to submit.
     $stripe_response = CRM_Core_Payment_Stripe::stripeCatchErrors(
       'charge', $stripe_charge, $params['qfKey']);
-
-    // Success!  Return some values for CiviCRM.
-    $params['trxn_id'] = $stripe_response->id;
-    // Return fees & net amount for Civi reporting.  Thanks Kevin!
-    $params['fee_amount'] = $stripe_response->fee / 100;
-    $params['net_amount'] = $params['amount'] - $params['fee_amount'];
+    if (!empty($stripe_response)) {
+      // Success!  Return some values for CiviCRM.
+      $params['trxn_id'] = $stripe_response->id;
+      // Return fees & net amount for Civi reporting.  Thanks Kevin!
+      $params['fee_amount'] = $stripe_response->fee / 100;
+      $params['net_amount'] = $params['amount'] - $params['fee_amount'];
+    }
+    else {
+      // There was no response from Stripe on the create charge command.
+      if(empty($params['selectMembership']) && empty($params['contributionPageID'])) {
+        $error_url = CRM_Utils_System::url('civicrm/event/register',
+          "_qf_Main_display=1&cancel=1&qfKey=" . $params['qfKey'], FALSE, NULL, FALSE);
+      }
+      else {
+        $error_url = CRM_Utils_System::url('civicrm/contribute/transact',
+          "_qf_Main_display=1&cancel=1&qfKey=" . $params['qfKey'], FALSE, NULL, FALSE);
+      }
+      CRM_Core_Error::statusBounce("Stripe transaction response not recieved!  Check the Logs section of your stripe.com account.", $error_url);
+    }
 
     return $params;
   }
@@ -432,13 +445,13 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
         VALUES (%1)", $query_params);
     }
 
-    // If a contact/customer has an existing active recurring 
+    // If a contact/customer has an existing active recurring
     // contribution/subscription, Stripe will update the existing subscription.
     // If only the amount has changed not the installments/frequency, Stripe
     // will not charge the card again until the next installment is due. This
     // does not work well for CiviCRM, since CiviCRM creates a new recurring
-    // contribution along with a new initial contribution, so it expects the 
-    // card to be charged immediately.  So, since Stripe only supports one 
+    // contribution along with a new initial contribution, so it expects the
+    // card to be charged immediately.  So, since Stripe only supports one
     // subscription per customer, we have to cancel the existing active
     // subscription first.
     if (!empty($stripe_customer->subscription) && $stripe_customer->subscription-> status == 'active') {

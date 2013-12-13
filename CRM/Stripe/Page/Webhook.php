@@ -17,8 +17,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
 
     $test_mode = ! $data->livemode;
 
-    $stripe_key = CRM_Core_DAO::singleValueQuery("SELECT user_name FROM civicrm_payment_processor WHERE payment_processor_type = 'Stripe' AND is_test = '$test_mode'");
-    require_once ("packages/stripe-php/lib/Stripe.php");
+    $stripe_key = CRM_Core_DAO::singleValueQuery("SELECT user_name FROM civicrm_payment_processor WHERE name = 'Stripe' AND is_test = '$test_mode'");    require_once ("packages/stripe-php/lib/Stripe.php");
     Stripe::setApiKey($stripe_key);
 
     // Retrieve Event from Stripe using ID even though we already have the values now.

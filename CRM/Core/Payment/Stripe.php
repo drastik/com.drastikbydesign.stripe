@@ -22,6 +22,12 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
   static protected $_mode = null;
 
   /**
+   * page type - event or contribution_page
+   * @var string
+   */
+  protected $_page_type = 'event';
+
+  /**
    * Constructor
    *
    * @param string $mode the mode of operation: live or test
@@ -126,8 +132,8 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       $error_message .= 'Message: ' . $err['message'] . "<br />";
 
       // Check Event vs Contribution for redirect.  There must be a better way.
-      if(empty($params['selectMembership'])
-        && empty($params['contributionPageID'])) {
+      if($this->_page_type != 'contribution_page' && (empty($params['selectMembership'])
+        && empty($params['contributionPageID']))) {
         $error_url = CRM_Utils_System::url('civicrm/event/register',
           "_qf_Main_display=1&cancel=1&qfKey=$qfKey", FALSE, NULL, FALSE);
       }
@@ -166,7 +172,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       $error_message .= 'Code: ' . $err['code'] . "<br />";
       $error_message .= 'Message: ' . $err['message'] . "<br />";
 
-      if(empty($params['selectMembership'])
+      if($this->_page_type != 'contribution_page' && empty($params['selectMembership'])
         && empty($params['contributionPageID'])) {
         $error_url = CRM_Utils_System::url('civicrm/event/register',
           "_qf_Main_display=1&cancel=1&qfKey=$qfKey", FALSE, NULL, FALSE);
@@ -193,6 +199,9 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
    * @public
    */
   function doDirectPayment(&$params) {
+    if(!empty($params['contributionPageID'])) {
+      $this->_page_type = 'contribution_page';
+    }
     // Let a $0 transaction pass.
     if (empty($params['amount']) || $params['amount'] == 0) {
       return $params;

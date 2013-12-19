@@ -212,8 +212,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     Stripe::setApiKey($this->_paymentProcessor['user_name']);
 
     // Stripe amount required in cents.
-    $amount = number_format($params['amount'], 2, '.', '');
-    $amount = (int) preg_replace('/[^\d]/', '', strval($amount));
+    $amount = CRM_Utils_Rule::cleanMoney($params['amount']) * 100;
 
     // Get Cardholder's full name.
     /*

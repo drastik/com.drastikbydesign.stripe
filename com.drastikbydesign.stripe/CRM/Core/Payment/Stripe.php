@@ -209,11 +209,8 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     // Include Stripe library & Set API credentials.
     require_once("stripe-php/lib/Stripe.php");
     Stripe::setApiKey($this->_paymentProcessor['user_name']);
-
     // Stripe amount required in cents.
-    $amount = (int)preg_replace('/[^\d]/', '', strval($params['amount']));
-    // It would require 3 digits after the decimal for one to make it this far.
-    // CiviCRM prevents this, but let's be redundant.
+    $amount = CRM_Utils_Rule::cleanMoney($params['amount']) * 100;
 
     // Get Cardholder's full name.
     /*

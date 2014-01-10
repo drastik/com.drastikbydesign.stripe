@@ -1,6 +1,8 @@
 WARNING:
 -------
-Version 1.8+ of this extension *must* use Stripe's latest API verison as of Jan 9th, 2014.
+Version 1.8+ of this extension *must* use Stripe's latest API verison as of Jan 9th, 2014.  
+This is the API setting within your stripe.com account settings.
+More info on how to change:  https://stripe.com/docs/upgrades#how-can-i-upgrade-my-api
 
 PLEASE READ:
 -----------

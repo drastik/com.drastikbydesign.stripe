@@ -1,3 +1,7 @@
+WARNING:
+-------
+Version 1.8+ of this extension *must* use Stripe's latest API verison as of Jan 9th, 2014.
+
 PLEASE READ:
 -----------
 There are 3 versions of this extension available.  This is:

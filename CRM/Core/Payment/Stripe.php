@@ -247,8 +247,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       $card_details = $params['stripe_token'];
     }
     else {
-      CRM_Core_Error::fatal(ts('Stripe.js token was not passed!
-        Have you turned on the CiviCRM-Stripe CMS module?'));
+      CRM_Core_Error::fatal(ts('Stripe.js token was not passed!'));
     }
 
     /****

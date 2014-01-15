@@ -110,10 +110,71 @@ function stripe_civicrm_buildForm($formName, &$form) {
       if (empty($_GET['type'])) {
         if (!isset($form->_elementIndex['stripe_token'])) {
           $form->addElement('hidden', 'stripe_token', NULL, array('id'=> 'stripe-token'));
+          stripe_add_stripe_js($form);
         }
       }
     }
   }
+  // For the 'Record Contribution' backend page.
+  if ($formName == 'CRM_Contribute_Form_Contribution' && !empty($form->_processors)) {
+    if (!isset($form->_elementIndex['stripe_token'])) {
+      $form->addElement('hidden', 'stripe_token', NULL, array('id'=> 'stripe-token'));
+      stripe_add_stripe_js($form);
+    }
+    // Add email field as it would usually be found on donation forms.
+    if (!isset($form->_elementIndex['email']) && !empty($form->userEmail)) {
+      $form->addElement('hidden', 'email', $form->userEmail, array('id'=> 'user-email'));
+    }
+  }
+}
+
+/**
+ * Add publishable key and event bindings for Stripe.js.
+ */
+function stripe_add_stripe_js($form) {
+  CRM_Core_Resources::singleton()->addScriptFile('com.drastikbydesign.stripe', 'js/civicrm_stripe.js');
+
+  if (!empty($form->_paymentProcessor['password'])) {
+    $stripe_pub_key = $form->_paymentProcessor['password'];
+  }
+  else {
+      // Find Stripe's payproc ID in Civi.
+      $query_params = array(
+          1 => array('Stripe', 'String'),
+        );
+      $stripe_pp_id = CRM_Core_DAO::singleValueQuery("SELECT id
+        FROM civicrm_payment_processor_type
+        WHERE name = %1", $query_params);
+
+      // Find out if the form might use Stripe.
+      if (!empty($stripe_pp_id)) {
+        $mode = ($form->_mode == 'live' ? 0 : 1);
+        $query_params = array(
+          1 => array($stripe_pp_id, 'Integer'),
+          2 => array($mode, 'Integer'),
+        );
+        $stripe_procs_query = CRM_Core_DAO::executeQuery("SELECT name, password
+          FROM civicrm_payment_processor
+          WHERE payment_processor_type_id = %1 AND is_test = %2", $query_params);
+        // Loop through and see if Stripe is on this form.
+        while ($stripe_procs_query->fetch()) {
+          foreach ($form->_processors as $form_processor) {
+            if ($form_processor == $stripe_procs_query->name) {
+              $stripe_pub_key = $stripe_procs_query->password;
+              break;
+            }
+            if (!empty($stripe_pub_key)) { break; }
+          }
+        }
+      }
+  }
+
+  // Add Stripe publishable key to CRM.stripe namespace.
+  CRM_Core_Resources::singleton()->addSetting(array(
+    'stripe' => array(
+      'pub_key' => $stripe_pub_key,
+    )
+  ));
 }
 
 /**

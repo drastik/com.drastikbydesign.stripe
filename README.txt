@@ -1,8 +1,12 @@
 WARNING:
 -------
-Version 1.8+ of this extension *must* use Stripe's latest API verison as of Jan 9th, 2014.  
+Version 1.8+ of this extension *must* use Stripe's latest API verison as of Jan 9th, 2014.
 This is the API setting within your stripe.com account settings.
 More info on how to change:  https://stripe.com/docs/upgrades#how-can-i-upgrade-my-api
+
+Also, your CiviCRM 'Resource URLs' must be set to the extensions directory
+relative to Drupal/CRM base.  Example: /sites/all/civicrm_extensions/
+This is the admin page for Resource URLs:  /civicrm/admin/setting/url
 
 PLEASE READ:
 -----------

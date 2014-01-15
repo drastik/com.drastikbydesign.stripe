@@ -355,10 +355,16 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     }
 
     // Prepare the charge array, minus Customer/Card details.
+    if (empty($params['description'])) {
+      $params['description'] = ts('CiviCRM backend contribution');
+    }
+    else {
+      $params['description'] = ts('# CiviCRM Donation Page # ') . $params['description'];
+    }
     $stripe_charge = array(
       'amount' => $amount,
       'currency' => strtolower($params['currencyID']),
-      'description' => '# CiviCRM Donation Page # ' . $params['description'] .
+      'description' => $params['description'] .
         ' # Invoice ID # ' . $params['invoiceID'],
     );
 

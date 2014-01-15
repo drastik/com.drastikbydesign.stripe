@@ -1,8 +1,10 @@
 WARNING:
 -------
-Version 1.8+ of this extension *must* use Stripe's latest API verison as of Jan 9th, 2014.  
+Version 1.8+ of this extension *must* use Stripe's latest API version as of Jan 9th, 2014.  
 This is the API setting within your stripe.com account settings.
-More info on how to change:  https://stripe.com/docs/upgrades#how-can-i-upgrade-my-api
+
+ * Check your version or update it in your Stripe account here: https://manage.stripe.com/account/apikeys
+ * More info on how to change:  https://stripe.com/docs/upgrades#how-can-i-upgrade-my-api
 
 PLEASE READ:
 -----------
@@ -15,9 +17,12 @@ IMPORTANT:
 In 4.4 the Webhook.php file is registered to the path of civicrm/stripe/webhook
 You have to make a Webhook rule in your Stripe account and enter the path to Webhook.php for recurring charges to end!
 
+ * Set up webhooks in your Stripe account here: https://manage.stripe.com/account/webhooks
+
 INSTALLATION INSTRUCTIONS:
 -------------------------
 For CiviCRM 4.4:
 1)  Install extension
 2)  Copy Stripe's PHP library folder 'stripe-php' to civicrm/packages/stripe-php
-You can get Stripe's PHP library here: https://github.com/stripe/stripe-php
+
+ * You can get Stripe's PHP library here: https://github.com/stripe/stripe-php

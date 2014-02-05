@@ -78,8 +78,8 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
   }
 
   function logStripeException($op, $exception) {
-    $body = $exception->getJsonBody();
-    CRM_Core_Error::debug_log_message("stripe_error $op: " . print_r($body, TRUE));
+    $body = print_r($exception->getJsonBody(), TRUE);
+    CRM_Core_Error::debug_log_message("Stripe_Error {$op}:  <pre> {$body} </pre>");
   }
 
   /**

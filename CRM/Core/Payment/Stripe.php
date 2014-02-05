@@ -77,6 +77,11 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     }
   }
 
+  function logStripeException($op, $exception) {
+    $body = print_r($exception->getJsonBody(), TRUE);
+    CRM_Core_Error::debug_log_message("Stripe_Error {$op}:  <pre> {$body} </pre>");
+  }
+
   /**
    * Run Stripe calls through this to catch exceptions gracefully.
    * @param  string $op
@@ -86,7 +91,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
    * @return varies
    *   Response from gateway.
    */
-  function stripeCatchErrors($op = 'create_customer', $params, $qfKey = '') {
+  function stripeCatchErrors($op = 'create_customer', $params, $qfKey = '', $ignores = array()) {
     // @TODO:  Handle all calls through this using $op switching for sanity.
     // Check for errors before trying to submit.
     $return = FALSE;
@@ -122,6 +127,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       }
     }
     catch(Stripe_CardError $e) {
+      $this->logStripeException($op, $e);
       $error_message = '';
       // Since it's a decline, Stripe_CardError will be caught
       $body = $e->getJsonBody();
@@ -147,21 +153,19 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       CRM_Core_Error::statusBounce("Oops!  Looks like there was an error.  Payment Response:
         <br /> $error_message", $error_url);
     }
-    catch (Stripe_InvalidRequestError $e) {
-      // Invalid parameters were supplied to Stripe's API
-    }
-    catch (Stripe_AuthenticationError $e) {
-      // Authentication with Stripe's API failed
-      // (maybe you changed API keys recently)
-    }
-    catch (Stripe_ApiConnectionError $e) {
-      // Network communication with Stripe failed
-    }
-    catch (Stripe_Error $e) {
-      // Display a very generic error to the user, and maybe send
-      // yourself an email
-    }
     catch (Exception $e) {
+      if (is_a($e, Stripe_Error)) {
+	foreach ($ignores as $ignore) {
+	  if (is_a($e, $ignore['class'])) {
+            $body = $e->getJsonBody();
+            $error = $body['error'];
+            if ($error['type'] == $ignore['type'] && $error['message'] == $ignore['message']) {
+	      return $return;
+	    }
+	  }
+	}
+        $this->logStripeException($op, $e);
+      }
       // Something else happened, completely unrelated to Stripe
       $error_message = '';
       // Since it's a decline, Stripe_CardError will be caught
@@ -457,7 +461,14 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
         'interval_count' => $frequency_interval,
       );
 
-      CRM_Core_Payment_Stripe::stripeCatchErrors('create_plan', $stripe_plan, $params['qfKey']);
+      $ignores = array(
+	array(
+	  'class' => Stripe_InvalidRequestError,
+	  'type' => 'invalid_request_error',
+	  'message' => 'Plan already exists.',
+	),
+      );
+      CRM_Core_Payment_Stripe::stripeCatchErrors('create_plan', $stripe_plan, $params['qfKey'], $ignores);
       // Prepare escaped query params.
       $query_params = array(
         1 => array($plan_id, 'String'),

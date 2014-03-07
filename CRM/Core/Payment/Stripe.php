@@ -480,7 +480,6 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
         'name' => "CiviCRM every {$frequency_interval} {$frequency}s {$formatted_amount}",
         'currency' => strtolower($params['currencyID']),
         'id' => $plan_id,
-        'livemode' => (boolean) $transaction_mode,
         'interval_count' => $frequency_interval,
       );
 

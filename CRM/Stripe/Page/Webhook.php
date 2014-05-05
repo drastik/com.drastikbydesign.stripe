@@ -17,7 +17,8 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
 
     $test_mode = ! $data->livemode;
 
-    $stripe_key = CRM_Core_DAO::singleValueQuery("SELECT user_name FROM civicrm_payment_processor WHERE payment_processor_type = 'Stripe' AND is_test = '$test_mode'");
+    $stripe_key = CRM_Core_DAO::singleValueQuery("SELECT pp.user_name FROM civicrm_payment_processor pp INNER JOIN civicrm_payment_processor_type ppt on pp.payment_processor_type_id = ppt.id AND ppt.name  = 'Stripe' WHERE is_test = '$test_mode'");
+
     require_once ("packages/stripe-php/lib/Stripe.php");
     Stripe::setApiKey($stripe_key);
 

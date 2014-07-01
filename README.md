@@ -27,7 +27,9 @@ You do not need the CMS module for 4.4
 WEBHOOK
 ---------
 The Webhook.php file is registered to the path of civicrm/stripe/webhook  
-You have to make a Webhook rule in your Stripe.com account and enter the path to Webhook.php for recurring charges to end!  
+You will have to make a Webhook rule in your Stripe.com account and enter this path for recurring charges to end!  
+For Drupal:  https://example.com/civicrm/stripe/webhook  
+For Joomla:  https://example.com/index.php/component/civicrm/?task=civicrm/stripe/webhook  
 
 INSTALLATION
 ------------

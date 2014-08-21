@@ -6,7 +6,9 @@
 
   // Response from Stripe.createToken.
   function stripeResponseHandler(status, response) {
+
     if (response.error) {
+
       $('html, body').animate({ scrollTop: 0 }, 300);
       // Show the errors on the form.
       if ($(".messages.crm-error.stripe-message").length > 0) {
@@ -14,7 +16,7 @@
         $(".messages.crm-error.stripe-message:first").remove();
       }
       $("form.stripe-payment-form").prepend('<div class="messages crm-error stripe-message">'
-        +'<strong>Payment Error Response:</strong>'
+        +'<strong>Testing Payment Error Response:</strong>'
           +'<ul id="errorList">'
             +'<li>Error: ' + response.error.message + '</li>'
           +'</ul>'
@@ -49,6 +51,7 @@
       if ($(this).find("#priceset input[type='radio']:checked").data('amount') == 0) {
         return true;
       }
+
       // Handle multiple payment options and Stripe not being chosen.
       if ($(this).find(".crm-section.payment_processor-section").length > 0) {
         if (!($(this).find('input[name="hidden_processor"]').length > 0)) {
@@ -56,6 +59,17 @@
         }
       }
 
+      // Handle pay later (option value '0' in payment_processor radio group)
+      if ($(this).find('input[name="payment_processor"]:checked').length && 
+         !parseInt($(this).find('input[name="payment_processor"]:checked').val())) {
+        return true;
+      }
+
+      // Handle pay later      
+      //if ($.inArray($(this).find('input[name="payment_processor"]').value, CRM.stripe.pp_ids) === -1) {
+      //  return true;
+      //}
+    
       // Handle changes introduced in CiviCRM 4.3.
       if ($(this).find('#credit_card_exp_date_M').length > 0) {
         var cc_month = $(this).find('#credit_card_exp_date_M').val();

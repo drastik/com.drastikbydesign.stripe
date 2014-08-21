@@ -7,7 +7,7 @@ More info on how to change:  https://stripe.com/docs/upgrades#how-can-i-upgrade-
 FIX ME
 ------
 The current state of this payment processor may not be stable.  
-It needs to be thoroughly checked for compatibility with the latest version(s) of CiviCRM 4.4.  
+It needs to be thoroughly checked for compatibility with the latest version(s) of CiviCRM 4.4+.  
 
 CONFIGURATION
 -------------
@@ -21,8 +21,8 @@ relative to Drupal/CRM base.  Example: /sites/all/civicrm_extensions/
 This is the admin page for Resource URLs:  /civicrm/admin/setting/url  
 
 There are multiple versions of this extension available.  This is:  
-4.4:  Extension for CiviCRM 4.4.  
-You do not need the CMS module for 4.4  
+4.5:  Extension for CiviCRM 4.5.  
+You do not need the CMS module for 4.5  
 
 WEBHOOK
 ---------
@@ -33,7 +33,7 @@ For Joomla:  https://example.com/index.php/component/civicrm/?task=civicrm/strip
 
 INSTALLATION
 ------------
-For CiviCRM 4.4:  
+For CiviCRM 4.5:  
 1)  Install extension.  
 2)  Copy Stripe's PHP library folder 'stripe-php' to civicrm/packages/stripe-php  
 You can get Stripe's PHP library here: https://github.com/stripe/stripe-php  

@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <extension key="com.drastikbydesign.stripe" type="module">
-  <downloadUrl>http://drastikbydesign.com/files/downloads/com.drastikbydesign.stripe-4.4-1.7.zip</downloadUrl>
+  <downloadUrl>http://drastikbydesign.com/files/downloads/com.drastikbydesign.stripe-4.5-1.8.zip</downloadUrl>
   <file>stripe</file>
   <name>Stripe</name>
   <description>Stripe Payment Processor</description>
@@ -12,11 +12,11 @@
     <author>Joshua Walker (drastik) - Drastik by Design</author>
     <email>admin@drastikbydesign.com</email>
   </maintainer>
-  <releaseDate>2014-06-30</releaseDate>
+  <releaseDate>2014-08-21</releaseDate>
   <version>1.8</version>
-  <develStage>stable</develStage>
+  <develStage>beta</develStage>
   <compatibility>
-    <ver>4.4</ver>
+    <ver>4.5</ver>
   </compatibility>
   <comments>http://drastikbydesign.com/blog-entry/civicrm-stripe-payment-processor</comments>
   <civix>

@@ -8,7 +8,6 @@
   function stripeResponseHandler(status, response) {
 
     if (response.error) {
-
       $('html, body').animate({ scrollTop: 0 }, 300);
       // Show the errors on the form.
       if ($(".messages.crm-error.stripe-message").length > 0) {
@@ -16,7 +15,7 @@
         $(".messages.crm-error.stripe-message:first").remove();
       }
       $("form.stripe-payment-form").prepend('<div class="messages crm-error stripe-message">'
-        +'<strong>Testing Payment Error Response:</strong>'
+        +'<strong>Payment Error Response:</strong>'
           +'<ul id="errorList">'
             +'<li>Error: ' + response.error.message + '</li>'
           +'</ul>'
@@ -64,11 +63,6 @@
          !parseInt($(this).find('input[name="payment_processor"]:checked').val())) {
         return true;
       }
-
-      // Handle pay later      
-      //if ($.inArray($(this).find('input[name="payment_processor"]').value, CRM.stripe.pp_ids) === -1) {
-      //  return true;
-      //}
     
       // Handle changes introduced in CiviCRM 4.3.
       if ($(this).find('#credit_card_exp_date_M').length > 0) {

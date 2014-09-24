@@ -41,7 +41,11 @@
      * Don't reference by form#id since it changes between payment pages
      * (Contribution / Event / etc).
      */
-    $('#crm-container>form').addClass('stripe-payment-form');
+     //Patch - remove direct child selector and account for dialog forms
+    $('#crm-container form').addClass('stripe-payment-form');
+    if($('#crm-ajax-dialog-1 form').length){
+        $('#crm-ajax-dialog-1 form').addClass('stripe-payment-form');
+    }
     $('form.stripe-payment-form').unbind('submit');
     // Intercept form submission.
     $("form.stripe-payment-form").submit(function(event) {

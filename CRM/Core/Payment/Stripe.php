@@ -170,7 +170,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
         <br /> $error_message", $error_url);
     }
     catch (Exception $e) {
-      if (is_a($e, Stripe_Error)) {
+      if (is_a($e, 'Stripe_Error')) {
 	foreach ($ignores as $ignore) {
 	  if (is_a($e, $ignore['class'])) {
             $body = $e->getJsonBody();

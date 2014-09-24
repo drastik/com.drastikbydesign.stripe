@@ -49,33 +49,37 @@
     $('form.stripe-payment-form').unbind('submit');
     // Intercept form submission.
     $("form.stripe-payment-form").submit(function(event) {
+
+      var $form = $(this);
+
       // Disable the submit button to prevent repeated clicks.
-      $('form.stripe-payment-form input.form-submit').attr("disabled", "disabled");
-      if ($(this).find("#priceset input[type='radio']:checked").data('amount') == 0) {
+      $form.find('.crm-form-submit').prop('disabled', true);
+
+      if ($form.find("#priceset input[type='radio']:checked").data('amount') == 0) {
         return true;
       }
 
       // Handle multiple payment options and Stripe not being chosen.
-      if ($(this).find(".crm-section.payment_processor-section").length > 0) {
-        if (!($(this).find('input[name="hidden_processor"]').length > 0)) {
+      if ($form.find(".crm-section.payment_processor-section").length > 0) {
+        if (!($form.find('input[name="hidden_processor"]').length > 0)) {
           return true;
         }
       }
 
       // Handle pay later (option value '0' in payment_processor radio group)
-      if ($(this).find('input[name="payment_processor"]:checked').length && 
-         !parseInt($(this).find('input[name="payment_processor"]:checked').val())) {
+      if ($form.find('input[name="payment_processor"]:checked').length && 
+         !parseInt($form.find('input[name="payment_processor"]:checked').val())) {
         return true;
       }
-    
+
       // Handle changes introduced in CiviCRM 4.3.
-      if ($(this).find('#credit_card_exp_date_M').length > 0) {
-        var cc_month = $(this).find('#credit_card_exp_date_M').val();
-        var cc_year = $(this).find('#credit_card_exp_date_Y').val();
+      if ($form.find('#credit_card_exp_date_M').length > 0) {
+        var cc_month = $form.find('#credit_card_exp_date_M').val();
+        var cc_year = $form.find('#credit_card_exp_date_Y').val();
       }
       else {
-        var cc_month = $(this).find('#credit_card_exp_date\\[M\\]').val();
-        var cc_year = $(this).find('#credit_card_exp_date\\[Y\\]').val();
+        var cc_month = $form.find('#credit_card_exp_date\\[M\\]').val();
+        var cc_year = $form.find('#credit_card_exp_date\\[Y\\]').val();
       }
 
       Stripe.createToken({
@@ -87,7 +91,7 @@
         exp_year: cc_year
       }, stripeResponseHandler);
 
-     // Prevent the form from submitting with the default action.
+      // Prevent the form from submitting with the default action.
       return false;
     });
 

@@ -36,6 +36,10 @@
     $.getScript('https://js.stripe.com/v1/', function() {
       Stripe.setPublishableKey(CRM.stripe.pub_key);
     });
+
+    // Remove click listeners from submit button, they cause problems
+    $('.crm-form-submit').attr('onclick', '');
+
     /*
      * Identify the payment form.
      * Don't reference by form#id since it changes between payment pages

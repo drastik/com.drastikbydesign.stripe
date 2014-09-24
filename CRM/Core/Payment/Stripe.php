@@ -230,7 +230,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     }
 
     // Include Stripe library & Set API credentials.
-    require_once('stripe-php/lib/Stripe.php');
+    require_once('packages/stripe-php/lib/Stripe.php');
     Stripe::setApiKey($this->_paymentProcessor['user_name']);
 
     // Stripe amount required in cents.

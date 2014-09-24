@@ -116,7 +116,7 @@ function stripe_civicrm_buildForm($formName, &$form) {
     }
   }
   // For the 'Record Contribution' backend page.
-  if ($formName == 'CRM_Contribute_Form_Contribution' && !empty($form->_processors)) {
+  if ($formName == 'CRM_Contribute_Form_Contribution' || $formName == 'CRM_Event_Form_Participant' || $formName == 'CRM_Member_Form_Membership' && !empty($form->_processors)) {
     if (!isset($form->_elementIndex['stripe_token'])) {
       $form->addElement('hidden', 'stripe_token', NULL, array('id'=> 'stripe-token'));
       stripe_add_stripe_js($form);

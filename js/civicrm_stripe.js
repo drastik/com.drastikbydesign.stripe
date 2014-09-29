@@ -33,7 +33,7 @@
 
   // Prepare the form.
   $(document).ready(function() {
-    $.getScript('https://js.stripe.com/v1/', function() {
+    $.getScript('https://js.stripe.com/v2/', function() {
       Stripe.setPublishableKey(CRM.stripe.pub_key);
     });
     /*
@@ -53,7 +53,7 @@
       var $form = $(this);
 
       // Disable the submit button to prevent repeated clicks.
-      $form.find('.crm-form-submit').prop('disabled', true);
+      $form.find('.crm-form-submit').attr('disabled', true);
 
       if ($form.find("#priceset input[type='radio']:checked").data('amount') == 0) {
         return true;
@@ -82,7 +82,7 @@
         var cc_year = $form.find('#credit_card_exp_date\\[Y\\]').val();
       }
 
-      Stripe.createToken({
+      Stripe.card.createToken({
         name: $('#billing_first_name').val() + ' ' + $('#billing_last_name').val(),
         address_zip: $("#billing_postal_code-5").val(),
         number: $('#credit_card_number').val(),

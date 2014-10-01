@@ -3,23 +3,21 @@
  * JS Integration between CiviCRM & Stripe.
  */
 (function ($) {
-
   // Response from Stripe.createToken.
   function stripeResponseHandler(status, response) {
-
     if (response.error) {
-      $('html, body').animate({ scrollTop: 0 }, 300);
+      $('html, body').animate({scrollTop: 0}, 300);
       // Show the errors on the form.
       if ($(".messages.crm-error.stripe-message").length > 0) {
         $(".messages.crm-error.stripe-message").slideUp();
         $(".messages.crm-error.stripe-message:first").remove();
       }
       $("form.stripe-payment-form").prepend('<div class="messages crm-error stripe-message">'
-        +'<strong>Payment Error Response:</strong>'
-          +'<ul id="errorList">'
-            +'<li>Error: ' + response.error.message + '</li>'
-          +'</ul>'
-        +'</div>');
+      + '<strong>Payment Error Response:</strong>'
+      + '<ul id="errorList">'
+      + '<li>Error: ' + response.error.message + '</li>'
+      + '</ul>'
+      + '</div>');
 
       $('form.stripe-payment-form input.form-submit').removeAttr("disabled");
     }
@@ -27,33 +25,41 @@
       var token = response['id'];
       // Update form with the token & submit.
       $("input#stripe-token").val(token);
-      $("form.stripe-payment-form").get(0).submit();
+
+      // clear actual credit card information and set dummy cc details
+      // we are setting dummy cc details to prevent validation errors
+      // this is a work around so that we don't transmit sensitive data
+      $('#credit_card_number').val('4111111111111111');
+      $('#cvv2').val('111');
+
+      $('form.stripe-payment-form input.form-submit').removeAttr("disabled");
+      $("input[type='submit']:last").click();
     }
   }
 
   // Prepare the form.
   $(document).ready(function() {
-    $.getScript('https://js.stripe.com/v1/', function() {
-      Stripe.setPublishableKey(CRM.stripe.pub_key);
+    $.getScript('https://js.stripe.com/v2/', function () {
+      Stripe.setPublishableKey($('#stripe-pub-key').val());
     });
+
     /*
      * Identify the payment form.
      * Don't reference by form#id since it changes between payment pages
      * (Contribution / Event / etc).
      */
-     //Patch - remove direct child selector and account for dialog forms
+    //Patch - remove direct child selector and account for dialog forms
+    $('#billing-payment-block').closest('form').addClass('stripe-payment-form');
     $('#crm-container form').addClass('stripe-payment-form');
-    if($('#crm-ajax-dialog-1 form').length){
-        $('#crm-ajax-dialog-1 form').addClass('stripe-payment-form');
+    if ($('#crm-ajax-dialog-1 form').length) {
+      $('#crm-ajax-dialog-1 form').addClass('stripe-payment-form');
     }
-    $('form.stripe-payment-form').unbind('submit');
+
     // Intercept form submission.
-    $("form.stripe-payment-form").submit(function(event) {
-
+    $("form.stripe-payment-form").submit(function (event) {
       var $form = $(this);
-
       // Disable the submit button to prevent repeated clicks.
-      $form.find('.crm-form-submit').prop('disabled', true);
+      $("input[type='submit']:last").attr('disabled', true);
 
       if ($form.find("#priceset input[type='radio']:checked").data('amount') == 0) {
         return true;
@@ -67,8 +73,7 @@
       }
 
       // Handle pay later (option value '0' in payment_processor radio group)
-      if ($form.find('input[name="payment_processor"]:checked').length && 
-         !parseInt($form.find('input[name="payment_processor"]:checked').val())) {
+      if ($form.find('input[name="payment_processor"]:checked').length && !parseInt($form.find('input[name="payment_processor"]:checked').val())) {
         return true;
       }
 
@@ -81,8 +86,7 @@
         var cc_month = $form.find('#credit_card_exp_date\\[M\\]').val();
         var cc_year = $form.find('#credit_card_exp_date\\[Y\\]').val();
       }
-
-      Stripe.createToken({
+      Stripe.card.createToken({
         name: $('#billing_first_name').val() + ' ' + $('#billing_last_name').val(),
         address_zip: $("#billing_postal_code-5").val(),
         number: $('#credit_card_number').val(),
@@ -94,9 +98,6 @@
       // Prevent the form from submitting with the default action.
       return false;
     });
-
-
   });
-
 
 }(jQuery));

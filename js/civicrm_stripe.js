@@ -3,6 +3,9 @@
  * JS Integration between CiviCRM & Stripe.
  */
 (function ($) {
+
+  var $form, $submit, buttonText;
+
   // Response from Stripe.createToken.
   function stripeResponseHandler(status, response) {
     if (response.error) {
@@ -12,19 +15,19 @@
         $(".messages.crm-error.stripe-message").slideUp();
         $(".messages.crm-error.stripe-message:first").remove();
       }
-      $("form.stripe-payment-form").prepend('<div class="messages crm-error stripe-message">'
+      $form.prepend('<div class="messages crm-error stripe-message">'
       + '<strong>Payment Error Response:</strong>'
       + '<ul id="errorList">'
       + '<li>Error: ' + response.error.message + '</li>'
       + '</ul>'
       + '</div>');
 
-      $('form.stripe-payment-form input.form-submit').removeAttr("disabled");
+      $submit.removeAttr("disabled").attr('value', buttonText);
     }
     else {
       var token = response['id'];
       // Update form with the token & submit.
-      $("input#stripe-token").val(token);
+      $form.find("input#stripe-token").val(token);
 
       // clear actual credit card information and set dummy cc details
       // we are setting dummy cc details to prevent validation errors
@@ -32,8 +35,8 @@
       $('#credit_card_number').val('4111111111111111');
       $('#cvv2').val('111');
 
-      $('form.stripe-payment-form input.form-submit').removeAttr("disabled");
-      $("input[type='submit']:last").click();
+      window.onbeforeunload = null;
+      $form.get(0).submit();
     }
   }
 
@@ -43,11 +46,17 @@
       Stripe.setPublishableKey($('#stripe-pub-key').val());
     });
 
+    $form   = $('form.stripe-payment-form');
+    $submit = $form.find('[type="submit"]');
+
+    $submit.removeAttr('onclick');
+
     // Intercept form submission.
-    $("form.stripe-payment-form").submit(function (event) {
-      var $form = $(this);
-      // Disable the submit button to prevent repeated clicks.
-      $("input[type='submit']:last").attr('disabled', true);
+    $form.submit(function (event) {
+
+      // Disable the submit button to prevent repeated clicks, keep old button text to restore if Stripe returns error
+      buttonText = $submit.attr('value');
+      $submit.attr('disabled', true).attr('value', 'Processing');
 
       if ($form.find("#priceset input[type='radio']:checked").data('amount') == 0) {
         return true;
@@ -75,12 +84,12 @@
         var cc_year = $form.find('#credit_card_exp_date\\[Y\\]').val();
       }
       Stripe.card.createToken({
-        name: $('#billing_first_name').val() + ' ' + $('#billing_last_name').val(),
-        address_zip: $("#billing_postal_code-5").val(),
-        number: $('#credit_card_number').val(),
-        cvc: $('#cvv2').val(),
-        exp_month: cc_month,
-        exp_year: cc_year
+        name:        $form.find('#billing_first_name').val() + ' ' + $form.find('#billing_last_name').val(),
+        address_zip: $form.find('#billing_postal_code-5').val(),
+        number:      $form.find('#credit_card_number').val(),
+        cvc:         $form.find('#cvv2').val(),
+        exp_month:   cc_month,
+        exp_year:    cc_year
       }, stripeResponseHandler);
 
       // Prevent the form from submitting with the default action.

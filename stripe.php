@@ -69,9 +69,20 @@ function stripe_civicrm_uninstall() {
  * Implementation of hook_civicrm_enable().
  */
 function stripe_civicrm_enable() {
+  $UF_webhook_paths = array(
+    "Drupal"    => "/civicrm/stripe/webhook",
+    "Drupal6"   => "/civicrm/stripe/webhook",
+    "Joomla"    => "/index.php/component/civicrm/?task=civicrm/stripe/webhook",
+    "WordPress" => "/?page=CiviCRM&q=civicrm/stripe/webhook"
+  );
+  // Use Drupal path as default if the UF isn't in the map above
+  $webookhook_path = (array_key_exists(CIVICRM_UF, $UF_webhook_paths)) ?
+    CIVICRM_UF_BASEURL . $UF_webhook_paths[CIVICRM_UF] :
+    CIVICRM_UF_BASEURL . "civicrm/stripe/webhook";
+
   CRM_Core_Session::setStatus("Stripe Payment Processor Message:
     <br />Don't forget to set up Webhooks in Stripe so that recurring contributions are ended!
-    <br />Webhook path to enter in Stripe: <strong>yoursite.com/civicrm/stripe/webhook</strong>
+    <br />Webhook path to enter in Stripe:<br/><em>$webookhook_path</em>
     <br />");
 
   return _stripe_civix_civicrm_enable();

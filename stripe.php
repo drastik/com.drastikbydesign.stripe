@@ -108,18 +108,18 @@ function stripe_civicrm_buildForm($formName, &$form) {
     && $form->_paymentProcessor['payment_processor_type'] == 'Stripe'
   ) {
     if (!stristr($formName, '_Confirm') && !stristr($formName, '_ThankYou')) {
-      //if (empty($_GET['type'])) {
       if (!isset($form->_elementIndex['stripe_token'])) {
+        $form->_attributes['class'] .= " stripe-payment-form";
         $form->addElement('hidden', 'stripe_token', NULL, array('id' => 'stripe-token'));
         stripe_add_stripe_js($form);
       }
-      //}
     }
   }
 
   // For the 'Record Contribution' backend page.
   if (($formName == 'CRM_Contribute_Form_Contribution' || $formName == 'CRM_Event_Form_Participant' || $formName == 'CRM_Member_Form_Membership' && !empty($form->_processors)) || stristr($formName, '_Main')) {
     if (!isset($form->_elementIndex['stripe_token'])) {
+      $form->_attributes['class'] .= " stripe-payment-form";
       $form->addElement('hidden', 'stripe_token', NULL, array('id' => 'stripe-token'));
       stripe_add_stripe_js($form);
     }

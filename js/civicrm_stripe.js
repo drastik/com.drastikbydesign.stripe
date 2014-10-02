@@ -43,18 +43,6 @@
       Stripe.setPublishableKey($('#stripe-pub-key').val());
     });
 
-    /*
-     * Identify the payment form.
-     * Don't reference by form#id since it changes between payment pages
-     * (Contribution / Event / etc).
-     */
-    //Patch - remove direct child selector and account for dialog forms
-    $('#billing-payment-block').closest('form').addClass('stripe-payment-form');
-    $('#crm-container form').addClass('stripe-payment-form');
-    if ($('#crm-ajax-dialog-1 form').length) {
-      $('#crm-ajax-dialog-1 form').addClass('stripe-payment-form');
-    }
-
     // Intercept form submission.
     $("form.stripe-payment-form").submit(function (event) {
       var $form = $(this);

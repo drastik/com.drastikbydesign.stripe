@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<extension key="com.drastikbydesign.stripe" type="module">
+<extension key="com.drastikbydesign.stripe" type="payment">
   <downloadUrl>http://drastikbydesign.com/files/downloads/com.drastikbydesign.stripe-4.4-1.7.zip</downloadUrl>
   <file>stripe</file>
   <name>Stripe</name>

@@ -5,6 +5,7 @@
 (function ($) {
   // Response from Stripe.createToken.
   function stripeResponseHandler(status, response) {
+    var submitButton = $("form.stripe-payment-form input[type='submit']:last");
     if (response.error) {
       $('html, body').animate({scrollTop: 0}, 300);
       // Show the errors on the form.
@@ -19,21 +20,15 @@
       + '</ul>'
       + '</div>');
 
-      $('form.stripe-payment-form input.form-submit').removeAttr("disabled");
+      submitButton.prop('disabled', false);
     }
     else {
       var token = response['id'];
       // Update form with the token & submit.
       $("input#stripe-token").val(token);
 
-      // clear actual credit card information and set dummy cc details
-      // we are setting dummy cc details to prevent validation errors
-      // this is a work around so that we don't transmit sensitive data
-      $('#credit_card_number').val('4111111111111111');
-      $('#cvv2').val('111');
-
-      $('form.stripe-payment-form input.form-submit').removeAttr("disabled");
-      $("input[type='submit']:last").click();
+      submitButton.prop('disabled', false);
+      $("form.stripe-payment-form").get(0).submit();
     }
   }
 
@@ -55,11 +50,16 @@
       $('#crm-ajax-dialog-1 form').addClass('stripe-payment-form');
     }
 
+    $("form.stripe-payment-form").unbind('submit');
+
     // Intercept form submission.
     $("form.stripe-payment-form").submit(function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+
       var $form = $(this);
       // Disable the submit button to prevent repeated clicks.
-      $("input[type='submit']:last").attr('disabled', true);
+      $form.find("input[type='submit']:last").prop('disabled', true);
 
       if ($form.find("#priceset input[type='radio']:checked").data('amount') == 0) {
         return true;
@@ -95,9 +95,7 @@
         exp_year: cc_year
       }, stripeResponseHandler);
 
-      // Prevent the form from submitting with the default action.
       return false;
     });
   });
-
-}(jQuery));
+}(CRM.$));

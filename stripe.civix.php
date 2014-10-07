@@ -1,9 +1,11 @@
 <?php
 
-// AUTO-GENERATED FILE -- This may be overwritten!
+// AUTO-GENERATED FILE -- Civix may overwrite any changes made to this file
 
 /**
  * (Delegated) Implementation of hook_civicrm_config
+ *
+ * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_config
  */
 function _stripe_civix_civicrm_config(&$config = NULL) {
   static $configured = FALSE;
@@ -29,53 +31,63 @@ function _stripe_civix_civicrm_config(&$config = NULL) {
  * (Delegated) Implementation of hook_civicrm_xmlMenu
  *
  * @param $files array(string)
+ * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_xmlMenu
  */
 function _stripe_civix_civicrm_xmlMenu(&$files) {
-  foreach (glob(__DIR__ . '/xml/Menu/*.xml') as $file) {
+  foreach (_stripe_civix_glob(__DIR__ . '/xml/Menu/*.xml') as $file) {
     $files[] = $file;
   }
 }
 
 /**
  * Implementation of hook_civicrm_install
+ *
+ * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_install
  */
 function _stripe_civix_civicrm_install() {
   _stripe_civix_civicrm_config();
   if ($upgrader = _stripe_civix_upgrader()) {
-    return $upgrader->onInstall();
+    $upgrader->onInstall();
   }
 }
 
 /**
  * Implementation of hook_civicrm_uninstall
+ *
+ * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_uninstall
  */
 function _stripe_civix_civicrm_uninstall() {
   _stripe_civix_civicrm_config();
   if ($upgrader = _stripe_civix_upgrader()) {
-    return $upgrader->onUninstall();
+    $upgrader->onUninstall();
   }
 }
 
 /**
  * (Delegated) Implementation of hook_civicrm_enable
+ *
+ * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_enable
  */
 function _stripe_civix_civicrm_enable() {
   _stripe_civix_civicrm_config();
   if ($upgrader = _stripe_civix_upgrader()) {
     if (is_callable(array($upgrader, 'onEnable'))) {
-      return $upgrader->onEnable();
+      $upgrader->onEnable();
     }
   }
 }
 
 /**
  * (Delegated) Implementation of hook_civicrm_disable
+ *
+ * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_disable
+ * @return mixed
  */
 function _stripe_civix_civicrm_disable() {
   _stripe_civix_civicrm_config();
   if ($upgrader = _stripe_civix_upgrader()) {
     if (is_callable(array($upgrader, 'onDisable'))) {
-      return $upgrader->onDisable();
+      $upgrader->onDisable();
     }
   }
 }
@@ -88,6 +100,8 @@ function _stripe_civix_civicrm_disable() {
  *
  * @return mixed  based on op. for 'check', returns array(boolean) (TRUE if upgrades are pending)
  *                for 'enqueue', returns void
+ *
+ * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_upgrade
  */
 function _stripe_civix_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
   if ($upgrader = _stripe_civix_upgrader()) {
@@ -95,6 +109,9 @@ function _stripe_civix_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
   }
 }
 
+/**
+ * @return CRM_Stripe_Upgrader
+ */
 function _stripe_civix_upgrader() {
   if (!file_exists(__DIR__.'/CRM/Stripe/Upgrader.php')) {
     return NULL;
@@ -106,16 +123,23 @@ function _stripe_civix_upgrader() {
 /**
  * Search directory tree for files which match a glob pattern
  *
+ * Note: Dot-directories (like "..", ".git", or ".svn") will be ignored.
+ * Note: In Civi 4.3+, delegate to CRM_Utils_File::findFiles()
+ *
  * @param $dir string, base dir
  * @param $pattern string, glob pattern, eg "*.txt"
  * @return array(string)
  */
 function _stripe_civix_find_files($dir, $pattern) {
+  if (is_callable(array('CRM_Utils_File', 'findFiles'))) {
+    return CRM_Utils_File::findFiles($dir, $pattern);
+  }
+
   $todos = array($dir);
   $result = array();
   while (!empty($todos)) {
     $subdir = array_shift($todos);
-    foreach (glob("$subdir/$pattern") as $match) {
+    foreach (_stripe_civix_glob("$subdir/$pattern") as $match) {
       if (!is_dir($match)) {
         $result[] = $match;
       }
@@ -123,7 +147,7 @@ function _stripe_civix_find_files($dir, $pattern) {
     if ($dh = opendir($subdir)) {
       while (FALSE !== ($entry = readdir($dh))) {
         $path = $subdir . DIRECTORY_SEPARATOR . $entry;
-        if ($entry == '.' || $entry == '..') {
+        if ($entry{0} == '.') {
         } elseif (is_dir($path)) {
           $todos[] = $path;
         }
@@ -137,6 +161,8 @@ function _stripe_civix_find_files($dir, $pattern) {
  * (Delegated) Implementation of hook_civicrm_managed
  *
  * Find any *.mgd.php files, merge their content, and return.
+ *
+ * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_managed
  */
 function _stripe_civix_civicrm_managed(&$entities) {
   $mgdFiles = _stripe_civix_find_files(__DIR__, '*.mgd.php');
@@ -148,5 +174,106 @@ function _stripe_civix_civicrm_managed(&$entities) {
       }
       $entities[] = $e;
     }
+  }
+}
+
+/**
+ * (Delegated) Implementation of hook_civicrm_caseTypes
+ *
+ * Find any and return any files matching "xml/case/*.xml"
+ *
+ * Note: This hook only runs in CiviCRM 4.4+.
+ *
+ * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_caseTypes
+ */
+function _stripe_civix_civicrm_caseTypes(&$caseTypes) {
+  if (!is_dir(__DIR__ . '/xml/case')) {
+    return;
+  }
+
+  foreach (_stripe_civix_glob(__DIR__ . '/xml/case/*.xml') as $file) {
+    $name = preg_replace('/\.xml$/', '', basename($file));
+    if ($name != CRM_Case_XMLProcessor::mungeCaseType($name)) {
+      $errorMessage = sprintf("Case-type file name is malformed (%s vs %s)", $name, CRM_Case_XMLProcessor::mungeCaseType($name));
+      CRM_Core_Error::fatal($errorMessage);
+      // throw new CRM_Core_Exception($errorMessage);
+    }
+    $caseTypes[$name] = array(
+      'module' => 'com.drastikbydesign.stripe',
+      'name' => $name,
+      'file' => $file,
+    );
+  }
+}
+
+/**
+ * Glob wrapper which is guaranteed to return an array.
+ *
+ * The documentation for glob() says, "On some systems it is impossible to
+ * distinguish between empty match and an error." Anecdotally, the return
+ * result for an empty match is sometimes array() and sometimes FALSE.
+ * This wrapper provides consistency.
+ *
+ * @link http://php.net/glob
+ * @param string $pattern
+ * @return array, possibly empty
+ */
+function _stripe_civix_glob($pattern) {
+  $result = glob($pattern);
+  return is_array($result) ? $result : array();
+}
+
+/**
+ * Inserts a navigation menu item at a given place in the hierarchy
+ *
+ * $menu - menu hierarchy
+ * $path - path where insertion should happen (ie. Administer/System Settings)
+ * $item - menu you need to insert (parent/child attributes will be filled for you)
+ * $parentId - used internally to recurse in the menu structure
+ */
+function _stripe_civix_insert_navigation_menu(&$menu, $path, $item, $parentId = NULL) {
+  static $navId;
+
+  // If we are done going down the path, insert menu
+  if (empty($path)) {
+    if (!$navId) $navId = CRM_Core_DAO::singleValueQuery("SELECT max(id) FROM civicrm_navigation");
+    $navId ++;
+    $menu[$navId] = array (
+      'attributes' => array_merge($item, array(
+        'label'      => CRM_Utils_Array::value('name', $item),
+        'active'     => 1,
+        'parentID'   => $parentId,
+        'navID'      => $navId,
+      ))
+    );
+    return true;
+  } else {
+    // Find an recurse into the next level down
+    $found = false;
+    $path = explode('/', $path);
+    $first = array_shift($path);
+    foreach ($menu as $key => &$entry) {
+      if ($entry['attributes']['name'] == $first) {
+        if (!$entry['child']) $entry['child'] = array();
+        $found = _stripe_civix_insert_navigation_menu($entry['child'], implode('/', $path), $item, $key);
+      }
+    }
+    return $found;
+  }
+}
+
+/**
+ * (Delegated) Implementation of hook_civicrm_alterSettingsFolders
+ *
+ * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_alterSettingsFolders
+ */
+function _stripe_civix_civicrm_alterSettingsFolders(&$metaDataFolders = NULL) {
+  static $configured = FALSE;
+  if ($configured) return;
+  $configured = TRUE;
+
+  $settingsDir = __DIR__ . DIRECTORY_SEPARATOR . 'settings';
+  if(is_dir($settingsDir) && !in_array($settingsDir, $metaDataFolders)) {
+    $metaDataFolders[] = $settingsDir;
   }
 }

@@ -3,9 +3,11 @@
  * JS Integration between CiviCRM & Stripe.
  */
 (function ($) {
+
+  var $form, $submit, buttonText;
+
   // Response from Stripe.createToken.
   function stripeResponseHandler(status, response) {
-    var submitButton = $("form.stripe-payment-form input[type='submit']:last");
     if (response.error) {
       $('html, body').animate({scrollTop: 0}, 300);
       // Show the errors on the form.
@@ -13,22 +15,23 @@
         $(".messages.crm-error.stripe-message").slideUp();
         $(".messages.crm-error.stripe-message:first").remove();
       }
-      $("form.stripe-payment-form").prepend('<div class="messages crm-error stripe-message">'
+      $form.prepend('<div class="messages crm-error stripe-message">'
       + '<strong>Payment Error Response:</strong>'
       + '<ul id="errorList">'
       + '<li>Error: ' + response.error.message + '</li>'
       + '</ul>'
       + '</div>');
 
-      submitButton.prop('disabled', false);
+      $submit.removeAttr('disabled').attr('value', buttonText);
+
     }
     else {
       var token = response['id'];
       // Update form with the token & submit.
-      $("input#stripe-token").val(token);
-
-      submitButton.prop('disabled', false);
-      $("form.stripe-payment-form").get(0).submit();
+      $form.find("input#stripe-token").val(token);
+      $submit.prop('disabled', false);
+      window.onbeforeunload = null;
+      $form.get(0).submit();
     }
   }
 
@@ -38,28 +41,21 @@
       Stripe.setPublishableKey($('#stripe-pub-key').val());
     });
 
-    /*
-     * Identify the payment form.
-     * Don't reference by form#id since it changes between payment pages
-     * (Contribution / Event / etc).
-     */
-    //Patch - remove direct child selector and account for dialog forms
-    $('#billing-payment-block').closest('form').addClass('stripe-payment-form');
-    $('#crm-container form').addClass('stripe-payment-form');
-    if ($('#crm-ajax-dialog-1 form').length) {
-      $('#crm-ajax-dialog-1 form').addClass('stripe-payment-form');
-    }
+    $form   = $('form.stripe-payment-form');
+    $submit = $form.find('[type="submit"]');
 
-    $("form.stripe-payment-form").unbind('submit');
+    $submit.removeAttr('onclick');
+
+    $form.unbind('submit');
 
     // Intercept form submission.
-    $("form.stripe-payment-form").submit(function (event) {
+    $form.submit(function (event) {
       event.preventDefault();
       event.stopPropagation();
 
-      var $form = $(this);
-      // Disable the submit button to prevent repeated clicks.
-      $form.find("input[type='submit']:last").prop('disabled', true);
+      // Disable the submit button to prevent repeated clicks, cache button text, restore if Stripe returns error
+      buttonText = $submit.attr('value');
+      $submit.prop('disabled', true).attr('value', 'Processing');
 
       if ($form.find("#priceset input[type='radio']:checked").data('amount') == 0) {
         return true;
@@ -87,12 +83,12 @@
         var cc_year = $form.find('#credit_card_exp_date\\[Y\\]').val();
       }
       Stripe.card.createToken({
-        name: $('#billing_first_name').val() + ' ' + $('#billing_last_name').val(),
-        address_zip: $("#billing_postal_code-5").val(),
-        number: $('#credit_card_number').val(),
-        cvc: $('#cvv2').val(),
-        exp_month: cc_month,
-        exp_year: cc_year
+        name:        $form.find('#billing_first_name').val() + ' ' + $form.find('#billing_last_name').val(),
+        address_zip: $form.find('#billing_postal_code-5').val(),
+        number:      $form.find('#credit_card_number').val(),
+        cvc:         $form.find('#cvv2').val(),
+        exp_month:   cc_month,
+        exp_year:    cc_year
       }, stripeResponseHandler);
 
       return false;

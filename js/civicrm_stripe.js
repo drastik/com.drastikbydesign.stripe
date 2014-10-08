@@ -8,6 +8,7 @@
 
   // Response from Stripe.createToken.
   function stripeResponseHandler(status, response) {
+    var submitButton = $("form.stripe-payment-form input[type='submit']:last");
     if (response.error) {
       $('html, body').animate({scrollTop: 0}, 300);
       // Show the errors on the form.
@@ -22,19 +23,14 @@
       + '</ul>'
       + '</div>');
 
-      $submit.removeAttr("disabled").attr('value', buttonText);
+      $submit.removeAttr('disabled').attr('value', buttonText);
+
     }
     else {
       var token = response['id'];
       // Update form with the token & submit.
       $form.find("input#stripe-token").val(token);
-
-      // clear actual credit card information and set dummy cc details
-      // we are setting dummy cc details to prevent validation errors
-      // this is a work around so that we don't transmit sensitive data
-      $('#credit_card_number').val('4111111111111111');
-      $('#cvv2').val('111');
-
+      $submit.prop('disabled', false);
       window.onbeforeunload = null;
       $form.get(0).submit();
     }
@@ -51,12 +47,16 @@
 
     $submit.removeAttr('onclick');
 
+    $form.unbind('submit');
+
     // Intercept form submission.
     $form.submit(function (event) {
+      event.preventDefault();
+      event.stopPropagation();
 
-      // Disable the submit button to prevent repeated clicks, keep old button text to restore if Stripe returns error
+      // Disable the submit button to prevent repeated clicks, cache button text, restore if Stripe returns error
       buttonText = $submit.attr('value');
-      $submit.attr('disabled', true).attr('value', 'Processing');
+      $submit.prop('disabled', true).attr('value', 'Processing');
 
       if ($form.find("#priceset input[type='radio']:checked").data('amount') == 0) {
         return true;
@@ -92,9 +92,7 @@
         exp_year:    cc_year
       }, stripeResponseHandler);
 
-      // Prevent the form from submitting with the default action.
       return false;
     });
   });
-
-}(jQuery));
+}(CRM.$));

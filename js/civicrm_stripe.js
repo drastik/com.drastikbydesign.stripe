@@ -8,7 +8,6 @@
 
   // Response from Stripe.createToken.
   function stripeResponseHandler(status, response) {
-    var submitButton = $("form.stripe-payment-form input[type='submit']:last");
     if (response.error) {
       $('html, body').animate({scrollTop: 0}, 300);
       // Show the errors on the form.

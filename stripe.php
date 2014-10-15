@@ -115,15 +115,17 @@ function stripe_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
  * @param $form - reference to the form object
  */
 function stripe_civicrm_buildForm($formName, &$form) {
-  if (isset($form->_paymentProcessor['payment_processor_type'])
-    && $form->_paymentProcessor['payment_processor_type'] == 'Stripe'
-  ) {
+  if (isset($form->_paymentProcessor['payment_processor_type']) && $form->_paymentProcessor['payment_processor_type'] == 'Stripe') {
     if (!stristr($formName, '_Confirm') && !stristr($formName, '_ThankYou')) {
       if (!isset($form->_elementIndex['stripe_token'])) {
         $form->_attributes['class'] .= " stripe-payment-form";
         $form->addElement('hidden', 'stripe_token', NULL, array('id' => 'stripe-token'));
         stripe_add_stripe_js($form);
       }
+    }
+    elseif (!empty($form->_params['stripe_token']) && !isset($form->_elementIndex['stripe_token'])) {
+      // Stash the token (including its value) in Confirm, in case they go backwards.
+      $form->addElement('hidden', 'stripe_token', $form->_params['stripe_token'], array('id' => 'stripe-token'));
     }
   }
 

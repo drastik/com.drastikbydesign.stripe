@@ -175,6 +175,14 @@ function stripe_add_stripe_js($form) {
       'pub_key' => $stripe_pub_key,
     )
   ));
+
+  // workaround b/c of CRM-13634
+
+  $config = CRM_Core_Config::singleton();
+
+  if ($config->userFramework == 'WordPress' && get_class($form) != 'CRM_Contribute_Form_Contribution') {
+    CRM_Core_Resources::singleton()->addScript('CRM.stripe = {"pub_key":"'.$stripe_pub_key.'"};');
+  }
 }
 
 /**

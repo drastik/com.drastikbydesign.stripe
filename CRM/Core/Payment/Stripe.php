@@ -109,41 +109,42 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
    * @return varies
    *   Response from gateway.
    */
-  function stripeCatchErrors($op = 'create_customer', $params, $qfKey = '', $ignores = array()) {
-    // @TODO:  Handle all calls through this using $op switching for sanity.
-    // Check for errors before trying to submit.
+  function stripeCatchErrors($op = 'create_customer', $stripe_params, $params, $ignores = array()) {
+    $error_url = $params['stripe_error_url'];
     $return = FALSE;
+    // Check for errors before trying to submit.
     try {
       switch ($op) {
         case 'create_customer':
-          $return = Stripe_Customer::create($params);
+          $return = Stripe_Customer::create($stripe_params);
           break;
 
         case 'charge':
-          $return = Stripe_Charge::create($params);
+          $return = Stripe_Charge::create($stripe_params);
           break;
 
         case 'save':
-          $return = $params->save();
+          $return = $stripe_params->save();
           break;
 
         case 'create_plan':
-          $return = Stripe_Plan::create($params);
+          $return = Stripe_Plan::create($stripe_params);
           break;
 
         case 'retrieve_customer':
-          $return = Stripe_Customer::retrieve($params);
+          $return = Stripe_Customer::retrieve($stripe_params);
           break;
 
         case 'retrieve_balance_transaction':
-          $return = Stripe_BalanceTransaction::retrieve($params);
+          $return = Stripe_BalanceTransaction::retrieve($stripe_params);
           break;
 
         default:
-          $return = Stripe_Customer::create($params);
+          $return = Stripe_Customer::create($stripe_params);
           break;
       }
-    } catch (Stripe_CardError $e) {
+    }
+    catch (Stripe_CardError $e) {
       $this->logStripeException($op, $e);
       $error_message = '';
       // Since it's a decline, Stripe_CardError will be caught
@@ -156,21 +157,11 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       $error_message .= 'Code: ' . $err['code'] . '<br />';
       $error_message .= 'Message: ' . $err['message'] . '<br />';
 
-      // Check Event vs Contribution for redirect.  There must be a better way.
-      if (empty($params['selectMembership'])
-        && empty($params['contributionPageID'])
-      ) {
-        $error_url = CRM_Utils_System::url('civicrm/event/register',
-          "_qf_Main_display=1&cancel=1&qfKey={$qfKey}", FALSE, NULL, FALSE);
-      }
-      else {
-        $error_url = CRM_Utils_System::url('civicrm/contribute/transact',
-          "_qf_Main_display=1&cancel=1&qfKey={$qfKey}", FALSE, NULL, FALSE);
-      }
-
+      // Redirect to first page of form and present error.
       CRM_Core_Error::statusBounce("Oops!  Looks like there was an error.  Payment Response:
-        <br /> $error_message", $error_url);
-    } catch (Exception $e) {
+        <br /> {$error_message}", $error_url);
+    }
+    catch (Exception $e) {
       if (is_a($e, 'Stripe_Error')) {
         foreach ($ignores as $ignore) {
           if (is_a($e, $ignore['class'])) {
@@ -195,19 +186,9 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       $error_message .= 'Code: ' . $err['code'] . "<br />";
       $error_message .= 'Message: ' . $err['message'] . "<br />";
 
-      if (empty($params['selectMembership'])
-        && empty($params['contributionPageID'])
-      ) {
-        $error_url = CRM_Utils_System::url('civicrm/event/register',
-          "_qf_Main_display=1&cancel=1&qfKey={$qfKey}", FALSE, NULL, FALSE);
-      }
-      else {
-        $error_url = CRM_Utils_System::url('civicrm/contribute/transact',
-          "_qf_Main_display=1&cancel=1&qfKey={$qfKey}", FALSE, NULL, FALSE);
-      }
-
+      // Redirect to first page of form and present error.
       CRM_Core_Error::statusBounce("Oops!  Looks like there was an error.  Payment Response:
-        <br /> $error_message", $error_url);
+        <br /> {$error_message}", $error_url);
     }
 
     return $return;
@@ -231,6 +212,13 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       return $params;
     }
 
+    // Get proper entry URL for returning on error.
+    $qfKey = $params['qfKey'];
+    $parsed_url = parse_url($params['entryURL']);
+    $url_path = substr($parsed_url['path'], 1);
+    $params['stripe_error_url'] = $error_url = CRM_Utils_System::url($url_path,
+      "_qf_Main_display=1&qfKey={$qfKey}", FALSE, NULL, FALSE);
+
     // Include Stripe library & Set API credentials.
     require_once('stripe-php/lib/Stripe.php');
     Stripe::setApiKey($this->_paymentProcessor['user_name']);
@@ -239,14 +227,13 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     $amount = number_format($params['amount'], 2, '.', '');
     $amount = (int) preg_replace('/[^\d]/', '', strval($amount));
 
-    // Get Cardholder's full name.
-    /*
-    $cc_name = $params['first_name'] . " ";
-    if (strlen($params['middle_name']) > 0) {
-      $cc_name .= $params['middle_name'] . " ";
+    // Use Stripe.js instead of raw card details.
+    if (!empty($params['stripe_token'])) {
+      $card_details = $params['stripe_token'];
     }
-    $cc_name .= $params['last_name'];
-    */
+    else {
+      CRM_Core_Error::fatal(ts('Stripe.js token was not passed!  Report this message to the site administrator.'));
+    }
 
     // Check for existing customer, create new otherwise.
     if (!empty($params['email'])) {
@@ -267,21 +254,19 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       FROM civicrm_stripe_customers
       WHERE email = %1", $query_params);
 
-    // Use Stripe.js instead of raw card details.
-    if (!empty($params['stripe_token'])) {
-      $card_details = $params['stripe_token'];
-    }
-    else {
-      CRM_Core_Error::fatal(ts('Stripe.js token was not passed!
-        Have you turned on the CiviCRM-Stripe CMS module?'));
-    }
-
     /****
      * If for some reason you cannot use Stripe.js and you are aware of PCI Compliance issues,
-     * here is the alternative to Stripe.js (also need to uncomment lines 211-215 & 275):
+     * here is the alternative to Stripe.js:
      ****/
 
     /*
+      // Get Cardholder's full name.
+      $cc_name = $params['first_name'] . " ";
+      if (strlen($params['middle_name']) > 0) {
+        $cc_name .= $params['middle_name'] . " ";
+      }
+      $cc_name .= $params['last_name'];
+
       // Prepare Card details in advance to use for new Stripe Customer object if we need.
       $card_details = array(
         'number' => $params['credit_card_number'],
@@ -302,16 +287,15 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
      watchdog('Stripe', $debug_code);
     */
 
-    // Create a new Customer in Stripe.
+    // Customer not in civicrm_stripe database.  Create a new Customer in Stripe.
     if (!isset($customer_query)) {
       $sc_create_params = array(
-        //'name' => $cc_name,
         'description' => 'Donor from CiviCRM',
         'card' => $card_details,
         'email' => $email,
       );
 
-      $stripe_customer = CRM_Core_Payment_Stripe::stripeCatchErrors('create_customer', $sc_create_params, $params['qfKey']);
+      $stripe_customer = CRM_Core_Payment_Stripe::stripeCatchErrors('create_customer', $sc_create_params, $params);
 
       // Store the relationship between CiviCRM's email address for the Contact & Stripe's Customer ID.
       if (isset($stripe_customer)) {
@@ -329,11 +313,8 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       }
     }
     else {
-      if (empty($params['qfKey'])) {
-        $params['qfKey'] = '';
-      }
-      $stripe_customer = CRM_Core_Payment_Stripe::stripeCatchErrors('retrieve_customer', $customer_query, $params['qfKey']);
-
+      // Customer was found in civicrm_stripe database, fetch from Stripe.
+      $stripe_customer = CRM_Core_Payment_Stripe::stripeCatchErrors('retrieve_customer', $customer_query, $params);
       if (!empty($stripe_customer)) {
         // Avoid the 'use same token twice' issue while still using latest card.
         if (!empty($params['selectMembership'])
@@ -345,19 +326,19 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
         }
         else {
           $stripe_customer->card = $card_details;
-          CRM_Core_Payment_Stripe::stripeCatchErrors('save', $stripe_customer, $params['qfKey']);
+          CRM_Core_Payment_Stripe::stripeCatchErrors('save', $stripe_customer, $params);
         }
       }
       else {
+        // Customer was found in civicrm_stripe database, but unable to be
+        // retrieved from Stripe.  Was he deleted?
         $sc_create_params = array(
-          //'name' => $cc_name,
           'description' => 'Donor from CiviCRM',
           'card' => $card_details,
           'email' => $email,
         );
 
-        $stripe_customer = CRM_Core_Payment_Stripe::stripeCatchErrors(
-          'create_customer', $sc_create_params, $params['qfKey']);
+        $stripe_customer = CRM_Core_Payment_Stripe::stripeCatchErrors('create_customer', $sc_create_params, $params);
 
         // Somehow a customer ID saved in the system no longer pairs
         // with a Customer within Stripe.  (Perhaps deleted using Stripe interface?).
@@ -379,6 +360,8 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
             VALUES (%1, %2)", $query_params);
         }
         else {
+          // Customer was found in civicrm_stripe database, but unable to be
+          // retrieved from Stripe, and unable to be created in Stripe.  What luck :(
           CRM_Core_Error::fatal(ts('There was an error saving new customer within Stripe.  Is Stripe down?'));
         }
       }
@@ -391,6 +374,8 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     else {
       $params['description'] = ts('CiviCRM # ') . $params['description'];
     }
+
+    // Stripe charge.
     $stripe_charge = array(
       'amount' => $amount,
       'currency' => strtolower($params['currencyID']),
@@ -411,14 +396,13 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     }
 
     // Fire away!  Check for errors before trying to submit.
-    $stripe_response = CRM_Core_Payment_Stripe::stripeCatchErrors(
-      'charge', $stripe_charge, $params['qfKey']);
+    $stripe_response = CRM_Core_Payment_Stripe::stripeCatchErrors('charge', $stripe_charge, $params);
     if (!empty($stripe_response)) {
       // Success!  Return some values for CiviCRM.
       $params['trxn_id'] = $stripe_response->id;
       // Return fees & net amount for Civi reporting.
       // Uses new Balance Trasaction object.
-      $balance_transaction = CRM_Core_Payment_Stripe::stripeCatchErrors('retrieve_balance_transaction', $stripe_response->balance_transaction, $params['qfKey']);
+      $balance_transaction = CRM_Core_Payment_Stripe::stripeCatchErrors('retrieve_balance_transaction', $stripe_response->balance_transaction, $params);
       if (!empty($balance_transaction)) {
         $params['fee_amount'] = $balance_transaction->fee / 100;
         $params['net_amount'] = $balance_transaction->net / 100;
@@ -426,14 +410,6 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     }
     else {
       // There was no response from Stripe on the create charge command.
-      if (empty($params['selectMembership']) && empty($params['contributionPageID'])) {
-        $error_url = CRM_Utils_System::url('civicrm/event/register',
-          '_qf_Main_display=1&cancel=1&qfKey=' . $params['qfKey'], FALSE, NULL, FALSE);
-      }
-      else {
-        $error_url = CRM_Utils_System::url('civicrm/contribute/transact',
-          '_qf_Main_display=1&cancel=1&qfKey=' . $params['qfKey'], FALSE, NULL, FALSE);
-      }
       CRM_Core_Error::statusBounce('Stripe transaction response not recieved!  Check the Logs section of your stripe.com account.', $error_url);
     }
 
@@ -497,7 +473,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
           'message' => 'Plan already exists.',
         ),
       );
-      CRM_Core_Payment_Stripe::stripeCatchErrors('create_plan', $stripe_plan, $params['qfKey'], $ignores);
+      CRM_Core_Payment_Stripe::stripeCatchErrors('create_plan', $stripe_plan, $params, $ignores);
       // Prepare escaped query params.
       $query_params = array(
         1 => array($plan_id, 'String'),

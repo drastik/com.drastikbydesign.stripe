@@ -249,13 +249,13 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     */
 
     // Check for existing customer, create new otherwise.
-    if (isset($params['email'])) {
+    if (!empty($params['email'])) {
       $email = $params['email'];
     }
-    elseif (isset($params['email-5'])) {
+    elseif (!empty($params['email-5'])) {
       $email = $params['email-5'];
     }
-    elseif (isset($params['email-Primary'])) {
+    elseif (!empty($params['email-Primary'])) {
       $email = $params['email-Primary'];
     }
     // Prepare escaped query params.
@@ -268,7 +268,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       WHERE email = %1", $query_params);
 
     // Use Stripe.js instead of raw card details.
-    if (isset($params['stripe_token'])) {
+    if (!empty($params['stripe_token'])) {
       $card_details = $params['stripe_token'];
     }
     else {

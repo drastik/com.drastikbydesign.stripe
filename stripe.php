@@ -117,15 +117,24 @@ function stripe_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
 function stripe_civicrm_buildForm($formName, &$form) {
   if (isset($form->_paymentProcessor['payment_processor_type']) && $form->_paymentProcessor['payment_processor_type'] == 'Stripe') {
     if (!stristr($formName, '_Confirm') && !stristr($formName, '_ThankYou')) {
+      // This is the 'Main', or first step of the form that collects CC data.
       if (!isset($form->_elementIndex['stripe_token'])) {
         $form->_attributes['class'] .= " stripe-payment-form";
         $form->addElement('hidden', 'stripe_token', NULL, array('id' => 'stripe-token'));
         stripe_add_stripe_js($form);
       }
     }
-    elseif (!empty($form->_params['stripe_token']) && !isset($form->_elementIndex['stripe_token'])) {
-      // Stash the token (including its value) in Confirm, in case they go backwards.
-      $form->addElement('hidden', 'stripe_token', $form->_params['stripe_token'], array('id' => 'stripe-token'));
+    else {
+      // This is a Confirm or Thank You (completed) form.
+      $params = $form->get('params');
+      // Contrib forms store this in $params, Event forms in $params[0].
+      if (!empty($params[0]['stripe_token'])) {
+        $params = $params[0];
+      }
+      if (!empty($params['stripe_token'])) {
+        // Stash the token (including its value) in Confirm, in case they go backwards.
+        $form->addElement('hidden', 'stripe_token', $params['stripe_token'], array('id' => 'stripe-token'));
+      }
     }
   }
 

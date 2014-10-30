@@ -295,7 +295,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
         'email' => $email,
       );
 
-      $stripe_customer = CRM_Core_Payment_Stripe::stripeCatchErrors('create_customer', $sc_create_params, $params);
+      $stripe_customer = $this->stripeCatchErrors('create_customer', $sc_create_params, $params);
 
       // Store the relationship between CiviCRM's email address for the Contact & Stripe's Customer ID.
       if (isset($stripe_customer)) {
@@ -314,7 +314,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     }
     else {
       // Customer was found in civicrm_stripe database, fetch from Stripe.
-      $stripe_customer = CRM_Core_Payment_Stripe::stripeCatchErrors('retrieve_customer', $customer_query, $params);
+      $stripe_customer = $this->stripeCatchErrors('retrieve_customer', $customer_query, $params);
       if (!empty($stripe_customer)) {
         // Avoid the 'use same token twice' issue while still using latest card.
         if (!empty($params['selectMembership'])
@@ -326,7 +326,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
         }
         else {
           $stripe_customer->card = $card_details;
-          CRM_Core_Payment_Stripe::stripeCatchErrors('save', $stripe_customer, $params);
+          $this->stripeCatchErrors('save', $stripe_customer, $params);
         }
       }
       else {
@@ -338,7 +338,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
           'email' => $email,
         );
 
-        $stripe_customer = CRM_Core_Payment_Stripe::stripeCatchErrors('create_customer', $sc_create_params, $params);
+        $stripe_customer = $this->stripeCatchErrors('create_customer', $sc_create_params, $params);
 
         // Somehow a customer ID saved in the system no longer pairs
         // with a Customer within Stripe.  (Perhaps deleted using Stripe interface?).
@@ -396,13 +396,13 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     }
 
     // Fire away!  Check for errors before trying to submit.
-    $stripe_response = CRM_Core_Payment_Stripe::stripeCatchErrors('charge', $stripe_charge, $params);
+    $stripe_response = $this->stripeCatchErrors('charge', $stripe_charge, $params);
     if (!empty($stripe_response)) {
       // Success!  Return some values for CiviCRM.
       $params['trxn_id'] = $stripe_response->id;
       // Return fees & net amount for Civi reporting.
       // Uses new Balance Trasaction object.
-      $balance_transaction = CRM_Core_Payment_Stripe::stripeCatchErrors('retrieve_balance_transaction', $stripe_response->balance_transaction, $params);
+      $balance_transaction = $this->stripeCatchErrors('retrieve_balance_transaction', $stripe_response->balance_transaction, $params);
       if (!empty($balance_transaction)) {
         $params['fee_amount'] = $balance_transaction->fee / 100;
         $params['net_amount'] = $balance_transaction->net / 100;
@@ -473,7 +473,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
           'message' => 'Plan already exists.',
         ),
       );
-      CRM_Core_Payment_Stripe::stripeCatchErrors('create_plan', $stripe_plan, $params, $ignores);
+      $this->stripeCatchErrors('create_plan', $stripe_plan, $params, $ignores);
       // Prepare escaped query params.
       $query_params = array(
         1 => array($plan_id, 'String'),

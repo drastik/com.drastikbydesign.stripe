@@ -50,9 +50,6 @@
 
     // Intercept form submission.
     $form.submit(function (event) {
-      event.preventDefault();
-      event.stopPropagation();
-
       // Disable the submit button to prevent repeated clicks, cache button text, restore if Stripe returns error
       buttonText = $submit.attr('value');
       $submit.prop('disabled', true).attr('value', 'Processing');
@@ -72,6 +69,8 @@
       if ($form.find('input[name="payment_processor"]:checked').length && !parseInt($form.find('input[name="payment_processor"]:checked').val())) {
         return true;
       }
+      event.preventDefault();
+      event.stopPropagation();
 
       // Handle changes introduced in CiviCRM 4.3.
       if ($form.find('#credit_card_exp_date_M').length > 0) {

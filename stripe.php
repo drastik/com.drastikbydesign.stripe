@@ -7,6 +7,9 @@ require_once 'stripe.civix.php';
  */
 function stripe_civicrm_config(&$config) {
   _stripe_civix_civicrm_config($config);
+  $extRoot = dirname( __FILE__ ) . DIRECTORY_SEPARATOR . 'packages' . DIRECTORY_SEPARATOR;
+  $include_path = $extRoot . PATH_SEPARATOR . get_include_path( );
+  set_include_path( $include_path );
 }
 
 /**

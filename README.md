@@ -35,9 +35,7 @@ For Wordpress:  https://example.com/?page=CiviCRM&q=civicrm/stripe/webhook
 INSTALLATION
 ------------
 For CiviCRM 4.5:  
-1)  Install extension.  
-2)  Copy Stripe's PHP library folder 'stripe-php' to civicrm/packages/stripe-php  
-You can get Stripe's PHP library here: https://github.com/stripe/stripe-php  
+1)  Install extension.
 
 AUTHOR INFO
 -----------

@@ -217,7 +217,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     $parsed_url = parse_url($params['entryURL']);
     $url_path = substr($parsed_url['path'], 1);
     $params['stripe_error_url'] = $error_url = CRM_Utils_System::url($url_path,
-      "_qf_Main_display=1&qfKey={$qfKey}", FALSE, NULL, FALSE);
+      $parsed_url['query'] . "&_qf_Main_display=1&qfKey={$qfKey}", FALSE, NULL, FALSE);
 
     // Include Stripe library & Set API credentials.
     require_once('stripe-php/lib/Stripe.php');
@@ -440,6 +440,8 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       case 'live':
         $transaction_mode = 1;
     }
+
+    // Get recurring contrib properties.
     $frequency = $params['frequency_unit'];
     $installments = $params['installments'];
     $frequency_interval = (empty($params['frequency_interval']) ? 1 : $params['frequency_interval']);

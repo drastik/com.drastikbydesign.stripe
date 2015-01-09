@@ -2,7 +2,7 @@
  * @file
  * JS Integration between CiviCRM & Stripe.
  */
-(function ($) {
+(function($, CRM) {
 
   var $form, $submit, buttonText;
 
@@ -93,4 +93,4 @@
       return false;
     });
   });
-}(CRM.$));
+}(cj, CRM));

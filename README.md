@@ -24,12 +24,12 @@ For Wordpress:  https://example.com/?page=CiviCRM&q=civicrm/stripe/webhook
 INSTALLATION
 ------------
 For CiviCRM 4.4 & 4.5:  
-1. Your CiviCRM 'Resource URLs' must be set to the extensions directory  
-relative to Drupal/CRM base.  Example: /sites/all/civicrm_extensions/  
-*NOT the full server path like /var/www/sites/all/civicrm_extensions/*  
-The admin page for Resource URLs is:  /civicrm/admin/setting/url  
+1)  Your CiviCRM 'Resource URLs' must be set to the extensions directory  
+    relative to Drupal/CRM base.  Example: /sites/all/civicrm_extensions/  
+    *NOT the full server path like /var/www/sites/all/civicrm_extensions/*  
+    The admin page for Resource URLs is:  /civicrm/admin/setting/url  
 
-2. Install extension via CiviCRM's "Manage Extensions" page.  
+2)  Install extension via CiviCRM's "Manage Extensions" page.  
 
 GOOD TO KNOW
 ------------

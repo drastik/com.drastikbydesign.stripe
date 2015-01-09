@@ -13,17 +13,6 @@ CONFIGURATION
 -------------
 All configuration is in the standard Payment Processors settings area in CiviCRM admin.  
 
-GOOD TO KNOW
-------------
-Your CiviCRM 'Resource URLs' must be set to the extensions directory  
-relative to Drupal/CRM base.  Example: /sites/all/civicrm_extensions/  
-*NOT the full server path like /var/www/sites/all/civicrm_extensions/*  
-This is the admin page for Resource URLs:  /civicrm/admin/setting/url  
-
-There are multiple versions of this extension available.  This is:  
-4.5:  Extension for CiviCRM 4.5.  
-You do not need the CMS module for 4.5  
-
 WEBHOOK
 ---------
 The Webhook.php file is registered to the path of civicrm/stripe/webhook  
@@ -34,8 +23,21 @@ For Wordpress:  https://example.com/?page=CiviCRM&q=civicrm/stripe/webhook
 
 INSTALLATION
 ------------
-For CiviCRM 4.5:  
-1)  Install extension.
+For CiviCRM 4.4 & 4.5:  
+1. Your CiviCRM 'Resource URLs' must be set to the extensions directory  
+relative to Drupal/CRM base.  Example: /sites/all/civicrm_extensions/  
+*NOT the full server path like /var/www/sites/all/civicrm_extensions/*  
+The admin page for Resource URLs is:  /civicrm/admin/setting/url  
+
+2. Install extension via CiviCRM's "Manage Extensions" page.  
+
+GOOD TO KNOW
+------------
+The stripe-php package has been added to this project & no longer needs to be  
+downloaded separately.  
+There are multiple versions of this extension available.  This is:  
+4.5:  Extension for CiviCRM 4.4 & 4.5.  
+You do not need the civicrm_stripe CMS module for 4.2 & up  
 
 AUTHOR INFO
 -----------

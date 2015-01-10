@@ -245,6 +245,13 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     elseif (!empty($params['email-Primary'])) {
       $email = $params['email-Primary'];
     }
+    elseif (!empty($params['contact_id'])){
+      $email = civicrm_api3('Contact', 'getvalue', array(
+        'id' => $params['contact_id'],
+        'return' => 'email',
+      ));
+    }
+
     // Prepare escaped query params.
     $query_params = array(
       1 => array($email, 'String'),

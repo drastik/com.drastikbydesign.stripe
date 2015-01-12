@@ -236,20 +236,44 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     }
 
     // Check for existing customer, create new otherwise.
-    if (!empty($params['email'])) {
-      $email = $params['email'];
+    // Possible email fields.
+    $email_fields = array(
+      'email',
+      'email-5',
+      'email-Primary',
+    );
+
+    // Possible contact ID fields.
+    $contact_id_fields = array(
+      'contact_id',
+      'contactID',
+    );
+
+    // Find out which email field has our yummy value.
+    foreach ($email_fields as $email_field) {
+      if (!empty($params[$email_field])) {
+        $email = $params[$email_field];
+        break;
+      }
     }
-    elseif (!empty($params['email-5'])) {
-      $email = $params['email-5'];
+
+    // We didn't find an email, but never fear - this might be a backend contrib.
+    // We can look for a contact ID field and get the email address.
+    if (empty($email)) {
+      foreach ($contact_id_fields as $cid_field) {
+        if (!empty($params[$cid_field])) {
+          $email = civicrm_api3('Contact', 'getvalue', array(
+            'id' => $params[$cid_field],
+            'return' => 'email',
+          ));
+          break;
+        }
+      }
     }
-    elseif (!empty($params['email-Primary'])) {
-      $email = $params['email-Primary'];
-    }
-    elseif (!empty($params['contact_id'])){
-      $email = civicrm_api3('Contact', 'getvalue', array(
-        'id' => $params['contact_id'],
-        'return' => 'email',
-      ));
+
+    // We still didn't get an email address?!  /ragemode on
+    if (empty($email)) {
+      CRM_Core_Error::fatal(ts('No email address found.  Please report this issue.'));
     }
 
     // Prepare escaped query params.

@@ -6,6 +6,12 @@
 
   var $form, $submit, buttonText;
 
+  $form = $('form.stripe-payment-form');
+
+  // Removing name attribute prevents data from being sent to server
+  $form.find('[name="credit_card_number"]').removeAttr('name');
+  $form.find('[name="cvv2"]').removeAttr('name');
+
   // Response from Stripe.createToken.
   function stripeResponseHandler(status, response) {
     if (response.error) {
@@ -41,7 +47,6 @@
       Stripe.setPublishableKey($('#stripe-pub-key').val());
     });
 
-    $form   = $('form.stripe-payment-form');
     $submit = $form.find('[type="submit"]');
 
     $submit.removeAttr('onclick');

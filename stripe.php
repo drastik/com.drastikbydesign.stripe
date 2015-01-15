@@ -167,6 +167,30 @@ function stripe_civicrm_buildForm($formName, &$form) {
 }
 
 /**
+ * Implementation of hook_civicrm_validateForm().
+ *
+ * Prevent serverside validation of CC/CVV2 so that both fields may be removed from the POST body without errors.
+ *
+ * @param $formName
+ * @param $fields
+ * @param $files
+ * @param $form
+ * @param $errors
+ */
+function stripe_civicrm_validateForm($formName, &$fields, &$files, &$form, &$errors) {
+  if ((isset($form->_paymentProcessor['payment`_processor_type']) &&$form->_paymentProcessor['payment_processor_type'] == 'Stripe') ||
+      isset($form->_elementIndex['stripe_token'])
+  ) {
+    if($form->elementExists('credit_card_number')){
+      $form->removeElement('credit_card_number');
+    }
+    if($form->elementExists('cvv2')){
+      $form->removeElement('cvv2');
+    }
+  }
+}
+
+/**
  * Add publishable key and event bindings for Stripe.js.
  */
 function stripe_add_stripe_js($form) {

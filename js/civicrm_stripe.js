@@ -56,6 +56,11 @@
     if (civiStripeForm.length) {
       $form = civiStripeForm;
       formType = constants.FORM_TYPE_CIVI;
+
+      // Remove the 'onclick' handler for CiviCRM pages, which is attached by CiviCRM when confirmation page is disabled
+      $form.find('input[type="submit"]').each(function(index, element) {
+        element.onclick = null;
+      });
     } else if (webformStripeForm.length) {
       $form = webformStripeForm;
       formType = constants.FORM_TYPE_WEBFORM;

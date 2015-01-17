@@ -5,6 +5,7 @@
 (function($, CRM) {
 
   var $form, $submit, buttonText;
+  var isWebform = false;
 
   // Response from Stripe.createToken.
   function stripeResponseHandler(status, response) {
@@ -29,6 +30,10 @@
       var token = response['id'];
       // Update form with the token & submit.
       $form.find("input#stripe-token").val(token);
+      if (isWebform) {
+        $form.find("input#credit_card_number").removeAttr('name');
+        $form.find("input#cvv2").removeAttr('name');
+      }
       $submit.prop('disabled', false);
       window.onbeforeunload = null;
       $form.get(0).submit();
@@ -41,8 +46,32 @@
       Stripe.setPublishableKey($('#stripe-pub-key').val());
     });
 
+    if ($('.webform-client-form').length) {
+      isWebform = true;
+      $('form.webform-client-form').addClass('stripe-payment-form');
+    }
+    else {
+      $('#crm-container>form').addClass('stripe-payment-form');
+    }
     $form   = $('form.stripe-payment-form');
-    $submit = $form.find('[type="submit"]');
+    if (isWebform) {
+      $submit = $form.find('.button-primary');
+    }
+    else {
+      $submit = $form.find('input[type="submit"]');
+    }
+
+    if (isWebform) {
+      if (!($('#action').length)) {
+        $form.append($('<input type="hidden" name="op" id="action" />'));
+      }
+      var $actions = $form.find('input[type=submit]');
+      $(":submit").click(function() {
+        $('#action').val(this.value);
+      });
+      $('#billingcheckbox:input').hide();
+      $('label[for="billingcheckbox"]').hide();
+    }
 
     $submit.removeAttr('onclick');
 
@@ -50,12 +79,35 @@
 
     // Intercept form submission.
     $form.submit(function (event) {
+      if (isWebform) {
+        var $processorFields = $('.civicrm-enabled[name$="civicrm_1_contribution_1_contribution_payment_processor_id]"]');
+        var plabel = $('input[name$="civicrm_1_contribution_1_contribution_payment_processor_id]"]:checked').next().text();
+
+        if ($('#action').attr('value') == "< Previous Page") {
+          return true;
+        }
+        if ($('#wf-crm-billing-total').length) {
+          if ($('#wf-crm-billing-total').data('data-amount') == '0') {
+            return true;
+          }
+        }
+        if ($processorFields.length) {
+          if ($processorFields.filter(':checked').val() == '0') {
+            return true;
+          }
+          if (!(plabel.indexOf('stripe') >= 0)) {
+            return true;
+          }
+        }
+      }
       // Disable the submit button to prevent repeated clicks, cache button text, restore if Stripe returns error
       buttonText = $submit.attr('value');
       $submit.prop('disabled', true).attr('value', 'Processing');
 
+      if ($('#priceset').length) {
       if ($form.find("#priceset input[type='radio']:checked").data('amount') == 0) {
         return true;
+      }
       }
 
       // Handle multiple payment options and Stripe not being chosen.

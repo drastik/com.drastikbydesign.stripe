@@ -122,10 +122,13 @@ function stripe_civicrm_buildForm($formName, &$form) {
     if (!stristr($formName, '_Confirm') && !stristr($formName, '_ThankYou')) {
       // This is the 'Main', or first step of the form that collects CC data.
       if (!isset($form->_elementIndex['stripe_token'])) {
-        if (empty($form->_attributes['class'])) {
-          $form->_attributes['class'] = '';
-        }
-        $form->_attributes['class'] .= ' stripe-payment-form';
+/*
+*      Moved this to civicrm_stripe.js for webform patch
+*        if (empty($form->_attributes['class'])) {
+*          $form->_attributes['class'] = '';
+*        }
+*        $form->_attributes['class'] .= ' stripe-payment-form';
+*/
         $form->addElement('hidden', 'stripe_token', NULL, array('id' => 'stripe-token'));
         stripe_add_stripe_js($form);
       }

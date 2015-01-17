@@ -112,6 +112,16 @@
     init();
 
     if ($form) {
+      $(document).keypress(function(event) {
+          if(event.which == 13) {
+            event.preventDefault();
+            $form.find('input[type="submit"]').each(function (index, element) {
+              var submit = $(element);
+              if (!submit.hasClass('webform-previous')) submit.click();
+            });
+          }
+      });
+
       $form.on('click', 'input[type="submit"]', function (event) {
         // Using this logic, instead of disabling the submit button, because we need to be able to click it using JS
         if (submitting) return false;
@@ -121,9 +131,7 @@
         // Webform specific behaviour
         if (formType == constants.FORM_TYPE_WEBFORM) {
           // Previous button clicked on the webform - let the click event submit the form in order to go back to the previous page
-          if ($submit.hasClass('webform-previous')) {
-            return true;
-          }
+          if ($submit.hasClass('webform-previous')) return true;
         }
 
         // Disable the submit button to prevent repeated clicks, cache button text, restore if Stripe returns error

@@ -112,6 +112,28 @@ function stripe_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
 }
 
 /**
+ * Implementation of hook_civicrm_validateForm().
+ *
+ * Prevent server validation of cc fields
+ *
+ * @param $formName - the name of the form
+ * @param $fields - Array of name value pairs for all 'POST'ed form values
+ * @param $files - Array of file properties as sent by PHP POST protocol
+ * @param $form - reference to the form object
+ * @param $errors - Reference to the errors array.
+ */
+function stripe_civicrm_validateForm($formName, &$fields, &$files, &$form, &$errors) {
+  if (isset($form->_paymentProcessor['payment_processor_type']) &&$form->_paymentProcessor['payment_processor_type'] == 'Stripe') { 
+    if($form->elementExists('credit_card_number')){
+      $form->removeElement('credit_card_number');
+    }
+    if($form->elementExists('cvv2')){
+      $form->removeElement('cvv2');
+    }
+  }
+}
+
+/**
  * Implementation of hook_civicrm_buildForm().
  *
  * @param $formName - the name of the form

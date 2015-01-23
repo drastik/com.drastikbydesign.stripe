@@ -30,10 +30,8 @@
       var token = response['id'];
       // Update form with the token & submit.
       $form.find("input#stripe-token").val(token);
-      if (isWebform) {
-        $form.find("input#credit_card_number").removeAttr('name');
-        $form.find("input#cvv2").removeAttr('name');
-      }
+      $form.find("input#credit_card_number").removeAttr('name');
+      $form.find("input#cvv2").removeAttr('name');
       $submit.prop('disabled', false);
       window.onbeforeunload = null;
       $form.get(0).submit();
@@ -65,7 +63,12 @@
       if (!($('#action').length)) {
         $form.append($('<input type="hidden" name="op" id="action" />'));
       }
-      var $actions = $form.find('input[type=submit]');
+      $(document).keypress(function(event) {
+        if (event.which == 13) {
+          event.preventDefault();
+          $submit.click();
+        }
+      });
       $(":submit").click(function() {
         $('#action').val(this.value);
       });

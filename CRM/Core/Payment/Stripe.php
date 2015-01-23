@@ -181,8 +181,9 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       else {
         // Don't have return url - return error object to api
         $core_err = CRM_Core_Error::singleton();
+        $message = 'Oops!  Looks like there was an error.  Payment Response: <br />' . $error_message;
         if ($err['code']) {
-          $core_err->push($err['code'], 0, NULL, $err['message']);
+          $core_err->push($err['code'], 0, NULL, $message);
         }
         else {
           $core_err->push(9000, 0, NULL, 'Unknown Error');
@@ -223,8 +224,9 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       else {
         // Don't have return url - return error object to api
         $core_err = CRM_Core_Error::singleton();
+        $message = 'Oops!  Looks like there was an error.  Payment Response: <br />' . $error_message;
         if ($err['code']) {
-          $core_err->push($err['code'], 0, NULL, $err['message']);
+          $core_err->push($err['code'], 0, NULL, $message);
         }
         else {
           $core_err->push(9000, 0, NULL, 'Unknown Error');

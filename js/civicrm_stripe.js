@@ -84,7 +84,6 @@
     $form.submit(function (event) {
       if (isWebform) {
         var $processorFields = $('.civicrm-enabled[name$="civicrm_1_contribution_1_contribution_payment_processor_id]"]');
-        var plabel = $('input[name$="civicrm_1_contribution_1_contribution_payment_processor_id]"]:checked').next().text();
 
         if ($('#action').attr('value') == "< Previous Page") {
           return true;
@@ -98,7 +97,7 @@
           if ($processorFields.filter(':checked').val() == '0') {
             return true;
           }
-          if (!(plabel.indexOf('stripe') >= 0)) {
+          if (!($form.find('input[name="stripe_token"]').length)) {
             return true;
           }
         }

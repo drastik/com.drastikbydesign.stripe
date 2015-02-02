@@ -61,7 +61,7 @@
 
     if (isWebform) {
       if (!($('#action').length)) {
-        $form.append($('<input type="hidden" name="op" id="action" />'));
+        $form.append('<input type="hidden" name="op" id="action" />');
       }
       $(document).keypress(function(event) {
         if (event.which == 13) {
@@ -74,6 +74,18 @@
       });
       $('#billingcheckbox:input').hide();
       $('label[for="billingcheckbox"]').hide();
+    }
+    else {
+      // This is native civicrm form - check for existing token
+      if ($form.find("input#stripe-token").val()) {
+        $('.credit_card_info-group').hide();
+        $('#billing-payment-block').append('<input type="button" value="Edit CC details" id="ccButton" />');
+        $('#ccButton').click(function() {
+          $('.credit_card_info-group').show();
+          $('#ccButton').hide();
+          $form.find('input#stripe-token').val('');
+        });
+      }
     }
 
     $submit.removeAttr('onclick');
@@ -117,12 +129,26 @@
         if (!($form.find('input[name="hidden_processor"]').length > 0)) {
           return true;
         }
+        if ($form.find('input[name="payment_processor"]:checked').length) {
+          processorId=$form.find('input[name="payment_processor"]:checked').val();
+          if (!($form.find('input[name="stripe_token"]').length) || ($('#stripe-id').length && $('#stripe-id').val() != processorId)) {
+            return true;
+          }
+        }
       }
 
       // Handle pay later (option value '0' in payment_processor radio group)
       if ($form.find('input[name="payment_processor"]:checked').length && !parseInt($form.find('input[name="payment_processor"]:checked').val())) {
         return true;
       }
+
+      // Handle reuse of existing token
+      if ($form.find("input#stripe-token").val()) {
+        $form.find("input#credit_card_number").removeAttr('name');
+        $form.find("input#cvv2").removeAttr('name');
+        return true;
+      }
+
       event.preventDefault();
       event.stopPropagation();
 

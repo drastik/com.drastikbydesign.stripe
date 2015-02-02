@@ -152,6 +152,7 @@ function stripe_civicrm_buildForm($formName, &$form) {
 *        $form->_attributes['class'] .= ' stripe-payment-form';
 */
         $form->addElement('hidden', 'stripe_token', NULL, array('id' => 'stripe-token'));
+        $form->addElement('hidden', 'stripe_id', $form->_paymentProcessor['id'], array('id' => 'stripe-id'));
         stripe_add_stripe_js($form);
       }
     }
@@ -165,6 +166,8 @@ function stripe_civicrm_buildForm($formName, &$form) {
       if (!empty($params['stripe_token'])) {
         // Stash the token (including its value) in Confirm, in case they go backwards.
         $form->addElement('hidden', 'stripe_token', $params['stripe_token'], array('id' => 'stripe-token'));
+        // Stash stripe payment processor id
+        $form->addElement('hidden', 'stripe_id', $form->_paymentProcessor['id'], array('id' => 'stripe-id'));
       }
     }
   }

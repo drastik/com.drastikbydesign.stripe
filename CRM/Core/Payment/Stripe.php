@@ -99,6 +99,22 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
   }
 
   /**
+   * Check if return from stripeCatchErrors was an error object
+   * that should be passed back to original api caller.
+   *
+   * @param  $stripeReturn
+   *   The return from a call to stripeCatchErrors
+   * @return bool
+   *
+   */
+  function isErrorReturn($stripeReturn) {
+      if (is_object($stripeReturn) && get_class($stripeReturn) == 'CRM_Core_Error') {
+        return true;
+      }
+      return false;
+  }
+
+  /**
    * Run Stripe calls through this to catch exceptions gracefully.
    *
    * @param string $op
@@ -157,9 +173,23 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       $error_message .= 'Code: ' . $err['code'] . '<br />';
       $error_message .= 'Message: ' . $err['message'] . '<br />';
 
+      if (isset($error_url)) {
       // Redirect to first page of form and present error.
       CRM_Core_Error::statusBounce("Oops!  Looks like there was an error.  Payment Response:
         <br /> {$error_message}", $error_url);
+      }
+      else {
+        // Don't have return url - return error object to api
+        $core_err = CRM_Core_Error::singleton();
+        $message = 'Oops!  Looks like there was an error.  Payment Response: <br />' . $error_message;
+        if ($err['code']) {
+          $core_err->push($err['code'], 0, NULL, $message);
+        }
+        else {
+          $core_err->push(9000, 0, NULL, 'Unknown Error');
+        }
+        return $core_err;
+      }
     }
     catch (Exception $e) {
       if (is_a($e, 'Stripe_Error')) {
@@ -186,9 +216,23 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       $error_message .= 'Code: ' . $err['code'] . "<br />";
       $error_message .= 'Message: ' . $err['message'] . "<br />";
 
+      if (isset($error_url)) {
       // Redirect to first page of form and present error.
       CRM_Core_Error::statusBounce("Oops!  Looks like there was an error.  Payment Response:
         <br /> {$error_message}", $error_url);
+      }
+      else {
+        // Don't have return url - return error object to api
+        $core_err = CRM_Core_Error::singleton();
+        $message = 'Oops!  Looks like there was an error.  Payment Response: <br />' . $error_message;
+        if ($err['code']) {
+          $core_err->push($err['code'], 0, NULL, $message);
+        }
+        else {
+          $core_err->push(9000, 0, NULL, 'Unknown Error');
+        }
+        return $core_err;
+      }
     }
 
     return $return;
@@ -213,11 +257,18 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     }
 
     // Get proper entry URL for returning on error.
-    $qfKey = $params['qfKey'];
-    $parsed_url = parse_url($params['entryURL']);
-    $url_path = substr($parsed_url['path'], 1);
-    $params['stripe_error_url'] = $error_url = CRM_Utils_System::url($url_path,
+    if (!(array_key_exists('qfKey', $params))) {
+      // Probably not called from a civicrm form (e.g. webform) -
+      // will return error object to original api caller.
+      $params['stripe_error_url'] = $error_url = null;
+    }
+    else {
+      $qfKey = $params['qfKey'];
+      $parsed_url = parse_url($params['entryURL']);
+      $url_path = substr($parsed_url['path'], 1);
+      $params['stripe_error_url'] = $error_url = CRM_Utils_System::url($url_path,
       $parsed_url['query'] . "&_qf_Main_display=1&qfKey={$qfKey}", FALSE, NULL, FALSE);
+    }
 
     // Include Stripe library & Set API credentials.
     require_once('stripe-php/lib/Stripe.php');
@@ -330,6 +381,9 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
 
       // Store the relationship between CiviCRM's email address for the Contact & Stripe's Customer ID.
       if (isset($stripe_customer)) {
+        if ($this->isErrorReturn($stripe_customer)) {
+          return $stripe_customer;
+        }
         // Prepare escaped query params.
         $query_params = array(
           1 => array($email, 'String'),
@@ -347,6 +401,9 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       // Customer was found in civicrm_stripe database, fetch from Stripe.
       $stripe_customer = $this->stripeCatchErrors('retrieve_customer', $customer_query, $params);
       if (!empty($stripe_customer)) {
+        if ($this->isErrorReturn($stripe_customer)) {
+          return $stripe_customer;
+        }
         // Avoid the 'use same token twice' issue while still using latest card.
         if (!empty($params['selectMembership'])
           && $params['selectMembership']
@@ -357,7 +414,10 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
         }
         else {
           $stripe_customer->card = $card_details;
-          $this->stripeCatchErrors('save', $stripe_customer, $params);
+          $response = $this->stripeCatchErrors('save', $stripe_customer, $params);
+            if (isset($response) && $this->isErrorReturn($response)) {
+              return $response;
+            }
         }
       }
       else {
@@ -375,6 +435,9 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
         // with a Customer within Stripe.  (Perhaps deleted using Stripe interface?).
         // Store the relationship between CiviCRM's email address for the Contact & Stripe's Customer ID.
         if (isset($stripe_customer)) {
+          if ($this->isErrorReturn($stripe_customer)) {
+            return $stripe_customer;
+          }
           // Delete whatever we have for this customer.
           $query_params = array(
             1 => array($email, 'String'),
@@ -429,19 +492,33 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     // Fire away!  Check for errors before trying to submit.
     $stripe_response = $this->stripeCatchErrors('charge', $stripe_charge, $params);
     if (!empty($stripe_response)) {
+      if ($this->isErrorReturn($stripe_response)) {
+        return $stripe_response;
+      }
       // Success!  Return some values for CiviCRM.
       $params['trxn_id'] = $stripe_response->id;
       // Return fees & net amount for Civi reporting.
       // Uses new Balance Trasaction object.
       $balance_transaction = $this->stripeCatchErrors('retrieve_balance_transaction', $stripe_response->balance_transaction, $params);
       if (!empty($balance_transaction)) {
+        if ($this->isErrorReturn($balance_transaction)) {
+          return $balance_transaction;
+        }
         $params['fee_amount'] = $balance_transaction->fee / 100;
         $params['net_amount'] = $balance_transaction->net / 100;
       }
     }
     else {
       // There was no response from Stripe on the create charge command.
-      CRM_Core_Error::statusBounce('Stripe transaction response not recieved!  Check the Logs section of your stripe.com account.', $error_url);
+      if (isset($error_url)) {
+        CRM_Core_Error::statusBounce('Stripe transaction response not recieved!  Check the Logs section of your stripe.com account.', $error_url);
+      }
+      else {
+        // Don't have return url - return error object to api
+        $core_err = CRM_Core_Error::singleton();
+        $core_err->push(9000, 0, NULL, 'Stripe transaction response not recieved!  Check the Logs section of your stripe.com account.');
+        return $core_err;
+      }
     }
 
     return $params;

@@ -112,6 +112,28 @@ function stripe_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
 }
 
 /**
+ * Implementation of hook_civicrm_validateForm().
+ *
+ * Prevent server validation of cc fields
+ *
+ * @param $formName - the name of the form
+ * @param $fields - Array of name value pairs for all 'POST'ed form values
+ * @param $files - Array of file properties as sent by PHP POST protocol
+ * @param $form - reference to the form object
+ * @param $errors - Reference to the errors array.
+ */
+function stripe_civicrm_validateForm($formName, &$fields, &$files, &$form, &$errors) {
+  if (isset($form->_paymentProcessor['payment_processor_type']) &&$form->_paymentProcessor['payment_processor_type'] == 'Stripe') { 
+    if($form->elementExists('credit_card_number')){
+      $form->removeElement('credit_card_number');
+    }
+    if($form->elementExists('cvv2')){
+      $form->removeElement('cvv2');
+    }
+  }
+}
+
+/**
  * Implementation of hook_civicrm_buildForm().
  *
  * @param $formName - the name of the form
@@ -122,11 +144,15 @@ function stripe_civicrm_buildForm($formName, &$form) {
     if (!stristr($formName, '_Confirm') && !stristr($formName, '_ThankYou')) {
       // This is the 'Main', or first step of the form that collects CC data.
       if (!isset($form->_elementIndex['stripe_token'])) {
-        if (empty($form->_attributes['class'])) {
-          $form->_attributes['class'] = '';
-        }
-        $form->_attributes['class'] .= ' stripe-payment-form';
+/*
+*      Moved this to civicrm_stripe.js for webform patch
+*        if (empty($form->_attributes['class'])) {
+*          $form->_attributes['class'] = '';
+*        }
+*        $form->_attributes['class'] .= ' stripe-payment-form';
+*/
         $form->addElement('hidden', 'stripe_token', NULL, array('id' => 'stripe-token'));
+        $form->addElement('hidden', 'stripe_id', $form->_paymentProcessor['id'], array('id' => 'stripe-id'));
         stripe_add_stripe_js($form);
       }
     }
@@ -140,6 +166,8 @@ function stripe_civicrm_buildForm($formName, &$form) {
       if (!empty($params['stripe_token'])) {
         // Stash the token (including its value) in Confirm, in case they go backwards.
         $form->addElement('hidden', 'stripe_token', $params['stripe_token'], array('id' => 'stripe-token'));
+        // Stash stripe payment processor id
+        $form->addElement('hidden', 'stripe_id', $form->_paymentProcessor['id'], array('id' => 'stripe-id'));
       }
     }
   }

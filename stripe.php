@@ -176,7 +176,8 @@ function stripe_civicrm_buildForm($formName, &$form) {
   $backendForms = array(
     'CRM_Contribute_Form_Contribution',
     'CRM_Event_Form_Participant',
-    'CRM_Member_Form_Membership'
+    'CRM_Member_Form_Membership',
+    'CRM_Member_Form_MembershipRenewal'
   );
   if (in_array($formName, $backendForms) && !empty($form->_processors)) {
     if (!isset($form->_elementIndex['stripe_token'])) {

@@ -143,14 +143,8 @@ function stripe_civicrm_buildForm($formName, &$form) {
   if (isset($form->_paymentProcessor['payment_processor_type']) && $form->_paymentProcessor['payment_processor_type'] == 'Stripe') {
     if (!stristr($formName, '_Confirm') && !stristr($formName, '_ThankYou')) {
       // This is the 'Main', or first step of the form that collects CC data.
-      if (!isset($form->_elementIndex['stripe_token'])) {
-/*
-*      Moved this to civicrm_stripe.js for webform patch
-*        if (empty($form->_attributes['class'])) {
-*          $form->_attributes['class'] = '';
-*        }
-*        $form->_attributes['class'] .= ' stripe-payment-form';
-*/
+      if (!$form->elementExists('stripe_token')) {
+        $form->setAttribute('class', $form->getAttribute('class') . ' stripe-payment-form');
         $form->addElement('hidden', 'stripe_token', NULL, array('id' => 'stripe-token'));
         $form->addElement('hidden', 'stripe_id', $form->_paymentProcessor['id'], array('id' => 'stripe-id'));
         stripe_add_stripe_js($form);

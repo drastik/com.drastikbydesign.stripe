@@ -123,7 +123,8 @@ function stripe_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
  * @param $errors - Reference to the errors array.
  */
 function stripe_civicrm_validateForm($formName, &$fields, &$files, &$form, &$errors) {
-  if (isset($form->_paymentProcessor['payment_processor_type']) && $form->_paymentProcessor['payment_processor_type'] == 'Stripe') {
+  if ((isset($form->_paymentProcessor['payment_processor_type']) &&$form->_paymentProcessor['payment_processor_type'] == 'Stripe')
+    || (!isset($form->_paymentProcessor['payment_processor_type']) && isset($form->_elementIndex['stripe_token']))) {
     if($form->elementExists('credit_card_number')){
       $cc_field = $form->getElement('credit_card_number');
       $form->removeElement('credit_card_number', true);

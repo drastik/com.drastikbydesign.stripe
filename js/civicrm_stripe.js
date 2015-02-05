@@ -49,7 +49,9 @@
       $('form.webform-client-form').addClass('stripe-payment-form');
     }
     else {
-      $('#crm-container>form').addClass('stripe-payment-form');
+      if (!($('.stripe-payment-form').length)) {
+        $('#crm-container>form').addClass('stripe-payment-form');
+      }
     }
     $form   = $('form.stripe-payment-form');
     if (isWebform) {

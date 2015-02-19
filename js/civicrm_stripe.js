@@ -76,6 +76,8 @@
       });
       $('#billingcheckbox:input').hide();
       $('label[for="billingcheckbox"]').hide();
+
+      var webformPrevious = $('input.webform-previous').first().val();
     }
     else {
       // This is native civicrm form - check for existing token
@@ -99,7 +101,7 @@
       if (isWebform) {
         var $processorFields = $('.civicrm-enabled[name$="civicrm_1_contribution_1_contribution_payment_processor_id]"]');
 
-        if ($('#action').attr('value') == "< Previous Page") {
+        if ($('#action').attr('value') == webformPrevious) {
           return true;
         }
         if ($('#wf-crm-billing-total').length) {

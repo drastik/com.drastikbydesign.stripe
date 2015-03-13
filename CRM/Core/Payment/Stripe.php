@@ -322,6 +322,18 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       }
     }
 
+    // Last ditch effort-- check the URL for a contact ID?
+    if (empty($email)){
+      $parsed_query = array();
+      parse_str(html_entity_decode($parsed_url['query']), $parsed_query);
+      if(isset($parsed_query['cid'])){
+        $email = civicrm_api3('Contact', 'getvalue', array(
+          'id'     => $parsed_query['cid'],
+          'return' => 'email',
+        ));
+      }
+    }
+
     // We still didn't get an email address?!  /ragemode on
     if (empty($email)) {
       CRM_Core_Error::fatal(ts('No email address found.  Please report this issue.'));

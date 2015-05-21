@@ -18,7 +18,7 @@ For Wordpress:  https://example.com/?page=CiviCRM&q=civicrm/stripe/webhook
 
 INSTALLATION
 ------------
-For CiviCRM 4.4 & 4.5:  
+For CiviCRM 4.4 & up:  
 1)  Your CiviCRM 'Resource URLs' must be set to the extensions directory  
     relative to Drupal/CRM base.  Example: /sites/all/civicrm_extensions/  
     *NOT the full server path like /var/www/sites/all/civicrm_extensions/*  
@@ -28,11 +28,12 @@ For CiviCRM 4.4 & 4.5:
 
 GOOD TO KNOW
 ------------
-The stripe-php package has been added to this project & no longer needs to be  
+* The stripe-php package has been added to this project & no longer needs to be  
 downloaded separately.  
-There are multiple versions of this extension available.  This is:  
-4.5:  Extension for CiviCRM 4.4 & 4.5.  
-You do not need the civicrm_stripe CMS module for 4.2 & up  
+* You do not need the civicrm_stripe CMS module for 4.2 & up  
+* There will no longer be branches for each version.  THe branches will be:  
+  * Civi's major.minor-dev, and we will create releases (tags) for each new release version.  
+    * Example: 4.6-dev.  
 
 AUTHOR INFO
 -----------

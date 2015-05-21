@@ -62,11 +62,12 @@
       }
 
       // Handle multiple payment options and Stripe not being chosen.
-      if ($form.find(".crm-section.payment_processor-section").length > 0) {
+      //Should be commented out in 4.6 as there is no hidden_processor field
+     /* if ($form.find(".crm-section.payment_processor-section").length > 0) {
         if (!($form.find('input[name="hidden_processor"]').length > 0)) {
           return true;
         }
-      }
+      }*/
 
       // Handle pay later (option value '0' in payment_processor radio group)
       if ($form.find('input[name="payment_processor"]:checked').length && !parseInt($form.find('input[name="payment_processor"]:checked').val())) {

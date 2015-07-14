@@ -91,7 +91,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
         $transaction_id = $charge->id;
         $new_invoice_id = $stripe_event_data->data->object->id;
         if (empty($recur_contrib_query->campaign_id)) {
-          $recur_contrib_query->campaign_id = 'NULL';
+          $recur_contrib_query->campaign_id = 0;
         }
 
         $query_params = array(

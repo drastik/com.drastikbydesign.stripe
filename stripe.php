@@ -31,6 +31,7 @@ function stripe_civicrm_install() {
   CREATE TABLE IF NOT EXISTS `civicrm_stripe_customers` (
     `email` varchar(64) COLLATE utf8_unicode_ci DEFAULT NULL,
     `id` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
+    `is_live` tinyint(4) NOT NULL COMMENT 'Whether this is a live or test transaction',
     UNIQUE KEY `email` (`email`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
   ");
@@ -38,6 +39,7 @@ function stripe_civicrm_install() {
   CRM_Core_DAO::executeQuery("
   CREATE TABLE IF NOT EXISTS `civicrm_stripe_plans` (
     `plan_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+    `is_live` tinyint(4) NOT NULL COMMENT 'Whether this is a live or test transaction',
     UNIQUE KEY `plan_id` (`plan_id`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
   ");

@@ -138,11 +138,11 @@
       buttonText = $submit.attr('value');
       $submit.prop('disabled', true).attr('value', 'Processing');
 
-      if ($('#priceset').length) {
-      if ($form.find("#priceset input[type='radio']:checked").data('amount') == 0) {
-        return true;
-      }
-      }
+//      if ($('#priceset').length) {
+//      if ($form.find("#priceset input[type='radio']:checked").data('amount') == 0) {
+//        return true;
+//      }
+//      }
 
       // Handle multiple payment options and Stripe not being chosen.
       if ($form.find(".crm-section.payment_processor-section").length > 0) {

@@ -138,11 +138,14 @@
       buttonText = $submit.attr('value');
       $submit.prop('disabled', true).attr('value', 'Processing');
 
-//      if ($('#priceset').length) {
-//      if ($form.find("#priceset input[type='radio']:checked").data('amount') == 0) {
-//        return true;
-//      }
-//      }
+      // Hide payment if total is 0 and no more participants
+      if ($('#priceset').length) {
+        currentTotal = cj('#pricevalue').text().replace(/[^\/\d]/g,'');
+        additionalParticipants = cj("#additional_participants").val();
+        if (currentTotal == 0 && !additionalParticipants) {
+          return true;
+        }
+      }
 
       // Handle multiple payment options and Stripe not being chosen.
       if ($form.find(".crm-section.payment_processor-section").length > 0) {

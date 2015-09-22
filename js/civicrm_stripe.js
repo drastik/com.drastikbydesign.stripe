@@ -138,10 +138,13 @@
       buttonText = $submit.attr('value');
       $submit.prop('disabled', true).attr('value', 'Processing');
 
+      // Hide payment if total is 0 and no more participants
       if ($('#priceset').length) {
-      if ($form.find("#priceset input[type='radio']:checked").data('amount') == 0) {
-        return true;
-      }
+        currentTotal = cj('#pricevalue').text().replace(/[^\/\d]/g,'');
+        additionalParticipants = cj("#additional_participants").val();
+        if (currentTotal == 0 && !additionalParticipants) {
+          return true;
+        }
       }
 
       // Handle multiple payment options and Stripe not being chosen.

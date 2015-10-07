@@ -259,10 +259,11 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     // Get live/test mode.
     switch ($this->_mode) {
       case 'test':
-        $transaction_mode = 0;
+        $params['transaction_mode'] = $transaction_mode = 0;
         break;
       case 'live':
-        $transaction_mode = 1;
+        $params['transaction_mode'] = $transaction_mode = 1;
+        break;
     }
 
     // Get proper entry URL for returning on error.
@@ -550,13 +551,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
    * @public
    */
   function doRecurPayment(&$params, $amount, $stripe_customer) {
-    switch ($this->_mode) {
-      case 'test':
-        $transaction_mode = 0;
-        break;
-      case 'live':
-        $transaction_mode = 1;
-    }
+    $transaction_mode = $params['transaction_mode'];
 
     // Get recurring contrib properties.
     $frequency = $params['frequency_unit'];

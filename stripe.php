@@ -32,7 +32,7 @@ function stripe_civicrm_install() {
     `email` varchar(64) COLLATE utf8_unicode_ci DEFAULT NULL,
     `id` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
     `is_live` tinyint(4) NOT NULL COMMENT 'Whether this is a live or test transaction',
-    UNIQUE KEY `email` (`email`)
+    UNIQUE KEY `id` (`id`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
   ");
 
@@ -125,14 +125,17 @@ function stripe_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
  * @param $errors - Reference to the errors array.
  */
 function stripe_civicrm_validateForm($formName, &$fields, &$files, &$form, &$errors) {
-  if ((isset($form->_paymentProcessor['payment_processor_type']) &&$form->_paymentProcessor['payment_processor_type'] == 'Stripe')
-    || (!isset($form->_paymentProcessor['payment_processor_type']) && isset($form->_elementIndex['stripe_token']))) {
-    if($form->elementExists('credit_card_number')){
+  if (empty($form->_paymentProcessor['payment_processor_type'])) {
+    return;
+  }
+  // If Stripe is active here.
+  if (isset($form->_elementIndex['stripe_token'])) {
+    if ($form->elementExists('credit_card_number')) {
       $cc_field = $form->getElement('credit_card_number');
       $form->removeElement('credit_card_number', true);
       $form->addElement($cc_field);
     }
-    if($form->elementExists('cvv2')){
+    if ($form->elementExists('cvv2')) {
       $cvv2_field = $form->getElement('cvv2');
       $form->removeElement('cvv2', true);
       $form->addElement($cvv2_field);
@@ -148,79 +151,66 @@ function stripe_civicrm_validateForm($formName, &$fields, &$files, &$form, &$err
  */
 function stripe_civicrm_buildForm($formName, &$form) {
   $stripe_key = stripe_get_key($form);
-  if (!empty($stripe_key)) {
-    if (!stristr($formName, '_Confirm') && !stristr($formName, '_ThankYou')) {
-      // This is the 'Main', or first step of the form that collects CC data.
-      if (!$form->elementExists('stripe_token')) {
-        $form->setAttribute('class', $form->getAttribute('class') . ' stripe-payment-form');
-        $form->addElement('hidden', 'stripe_token', NULL, array('id' => 'stripe-token'));
-      }
-      stripe_add_stripe_js($stripe_key, $form);
-    }
-    else {
-      // This is a Confirm or Thank You (completed) form.
-      $params = $form->get('params');
-      // Contrib forms store this in $params, Event forms in $params[0].
-      if (!empty($params[0]['stripe_token'])) {
-        $params = $params[0];
-      }
-      if (!empty($params['stripe_token'])) {
-        // Stash the token (including its value) in Confirm, in case they go backwards.
-        $form->addElement('hidden', 'stripe_token', $params['stripe_token'], array('id' => 'stripe-token'));
-      }
-    }
+  // If this is not a form Stripe is involved in, do nothing.
+  if (empty($stripe_key)) {
+    return;
   }
+  $params = $form->get('params');
+  // Contrib forms store this in $params, Event forms in $params[0].
+  if (!empty($params[0]['stripe_token'])) {
+    $params = $params[0];
+  }
+  $stripe_token = (empty($params['stripe_token']) ? NULL : $params['stripe_token']);
 
-  // For the 'Record Contribution' backend page.
-  $backendForms = array(
-    'CRM_Contribute_Form_Contribution',
-    'CRM_Event_Form_Participant',
-    'CRM_Member_Form_Membership',
-    'CRM_Member_Form_MembershipRenewal'
-  );
-  if (in_array($formName, $backendForms) && !empty($stripe_key)) {
-    if (!isset($form->_elementIndex['stripe_token'])) {
-      if (empty($form->_attributes['class'])) {
-        $form->_attributes['class'] = '';
-      }
-      $form->_attributes['class'] .= ' stripe-payment-form';
-      $form->addElement('hidden', 'stripe_token', NULL, array('id' => 'stripe-token'));
-      stripe_add_stripe_js($stripe_key, $form);
-    }
-    // Add email field as it would usually be found on donation forms.
-    if (!isset($form->_elementIndex['email']) && !empty($form->userEmail)) {
-      $form->addElement('hidden', 'email', $form->userEmail, array('id' => 'user-email'));
-    }
+  // Add some hidden fields for Stripe.
+  if (!$form->elementExists('stripe_token')) {
+    $form->setAttribute('class', $form->getAttribute('class') . ' stripe-payment-form');
+    $form->addElement('hidden', 'stripe_token', $stripe_token, array('id' => 'stripe-token'));
+  }
+  stripe_add_stripe_js($stripe_key, $form);
+
+  // Add email field as it would usually be found on donation forms.
+  if (!isset($form->_elementIndex['email']) && !empty($form->userEmail)) {
+    $form->addElement('hidden', 'email', $form->userEmail, array('id' => 'user-email'));
   }
 }
 
 /**
- * Return the stripe api public key (aka password) 
+ * Return the stripe api public key (aka password)
  *
  * If this form could conceiveably now or at any time in the future
  * contain a Stripe payment processor, return the api public key for
- * that processor. 
+ * that processor.
  */
 function stripe_get_key($form) {
-  // Backend contribution pages have the password embedded in them.
-  if(isset($form->_paymentProcessor['password'])) {
-    return $form->_paymentProcessor['password'];
+  // Only return first value if Stripe is the only/default.
+  if ($form->_paymentProcessor['payment_processor_type'] == 'Stripe') {
+    if (isset($form->_paymentProcessor['password'])) {
+      return $form->_paymentProcessor['password'];
+    }
   }
+
+  // Otherwise we need to look through all active payprocs and find Stripe.
   $is_test = 0;
-  if(isset($form->_mode)) {
+  if (isset($form->_mode)) {
     $is_test = $form->_mode == 'live' ? 0 : 1;
   }
 
-  // _paymentProcessors array seems to be the most reliable way to find
-  // at least payment processor on the form that is a stripe pp.
-  if(isset($form->_paymentProcessors)) {
-    foreach($form->_paymentProcessors as $k => $pp) {
-      if($pp['payment_processor_type'] == 'Stripe') {
+  // The _paymentProcessors array seems to be the most reliable way to find
+  // if the form is using Stripe.
+  if (!empty($form->_paymentProcessors)) {
+    foreach ($form->_paymentProcessors as $pp) {
+      if ($pp['payment_processor_type'] == 'Stripe') {
+        if (!empty($pp['password'])) {
+          return $pp['password'];
+        }
         // We have a match.
         return stripe_get_key_for_name($pp['name'], $is_test);
       }
     }
   }
+  // Return NULL if this is not a form with Stripe involved.
+  return NULL;
 }
 
 /**
@@ -230,13 +220,13 @@ function stripe_get_key_for_name($name, $is_test) {
   try {
     $params = array('name' => $name, 'is_test' => $is_test);
     $results = civicrm_api3('PaymentProcessor', 'get', $params);
-    if($results['count'] == 1) {
+    if ($results['count'] == 1) {
       $result = array_pop($results['values']);
       return $result['password'];
     }
   }
   catch (CiviCRM_API3_Exception $e) {
-    return NULL; 
+    return NULL;
   }
 }
 
@@ -245,8 +235,7 @@ function stripe_get_key_for_name($name, $is_test) {
  */
 function stripe_add_stripe_js($stripe_key, $form) {
   $form->addElement('hidden', 'stripe_pub_key', $stripe_key, array('id' => 'stripe-pub-key'));
-  CRM_Core_Resources::singleton()
-    ->addScriptFile('com.drastikbydesign.stripe', 'js/civicrm_stripe.js', 0);
+  CRM_Core_Resources::singleton()->addScriptFile('com.drastikbydesign.stripe', 'js/civicrm_stripe.js', 0);
 }
 
 /**

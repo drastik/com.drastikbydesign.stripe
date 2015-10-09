@@ -19,9 +19,8 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
    * Mode of operation: live or test.
    *
    * @var object
-   * @static
    */
-  static protected $_mode = NULL;
+  protected $_mode = NULL;
 
   /**
    * Constructor
@@ -32,29 +31,10 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
    * @return void
    */
   function __construct($mode, &$paymentProcessor) {
-    self::$_mode = $mode;
+    $this->_mode = $mode;
+    $this->_islive = ($mode == 'live' ? 1 : 0);
     $this->_paymentProcessor = $paymentProcessor;
     $this->_processorName = ts('Stripe');
-  }
-
-  /**
-   * Singleton function used to manage this object.
-   *
-   * @param string $mode the mode of operation: live or test
-   * @param object $paymentProcessor the details of the payment processor being invoked
-   * @param object $paymentForm reference to the form object if available
-   * @param boolean $force should we force a reload of this payment object
-   *
-   * @return object
-   * @static
-   *
-   */
-  static function &singleton($mode = 'test', &$paymentProcessor, &$paymentForm = NULL, $force = FALSE) {
-    $processorName = $paymentProcessor['name'];
-    if (self::$_singleton[$processorName] === NULL || $force) {
-      self::$_singleton[$processorName] = new self($mode, $paymentProcessor);
-    }
-    return self::$_singleton[$processorName];
   }
 
   /**
@@ -256,16 +236,6 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       return $params;
     }
 
-    // Get live/test mode.
-    switch ($this->_mode) {
-      case 'test':
-        $params['transaction_mode'] = $transaction_mode = 0;
-        break;
-      case 'live':
-        $params['transaction_mode'] = $transaction_mode = 1;
-        break;
-    }
-
     // Get proper entry URL for returning on error.
     if (!(array_key_exists('qfKey', $params))) {
       // Probably not called from a civicrm form (e.g. webform) -
@@ -344,7 +314,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
 
     $customer_query = CRM_Core_DAO::singleValueQuery("SELECT id
       FROM civicrm_stripe_customers
-      WHERE email = %1 AND is_live = '$transaction_mode'", $query_params);
+      WHERE email = %1 AND is_live = '{$this->_islive}'", $query_params);
 
     /****
      * If for some reason you cannot use Stripe.js and you are aware of PCI Compliance issues,
@@ -401,7 +371,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
         );
 
         CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_customers
-          (email, id, is_live) VALUES (%1, %2, '$transaction_mode')", $query_params);
+          (email, id, is_live) VALUES (%1, %2, '{$this->_islive}')", $query_params);
       }
       else {
         CRM_Core_Error::fatal(ts('There was an error saving new customer within Stripe.  Is Stripe down?'));
@@ -453,7 +423,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
             1 => array($email, 'String'),
           );
           CRM_Core_DAO::executeQuery("DELETE FROM civicrm_stripe_customers
-            WHERE email = %1 AND is_live = '$transaction_mode'", $query_params);
+            WHERE email = %1 AND is_live = '{$this->_islive}'", $query_params);
 
           // Create new record for this customer.
           $query_params = array(
@@ -461,7 +431,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
             2 => array($stripe_customer->id, 'String'),
           );
           CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_customers (email, id, is_live)
-            VALUES (%1, %2, '$transaction_mode')", $query_params);
+            VALUES (%1, %2, '{$this->_islive}')", $query_params);
         }
         else {
           // Customer was found in civicrm_stripe database, but unable to be
@@ -551,8 +521,6 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
    * @public
    */
   function doRecurPayment(&$params, $amount, $stripe_customer) {
-    $transaction_mode = $params['transaction_mode'];
-
     // Get recurring contrib properties.
     $frequency = $params['frequency_unit'];
     $installments = $params['installments'];
@@ -567,7 +535,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
 
     $stripe_plan_query = CRM_Core_DAO::singleValueQuery("SELECT plan_id
       FROM civicrm_stripe_plans
-      WHERE plan_id = %1 AND is_live = '$transaction_mode'", $query_params);
+      WHERE plan_id = %1 AND is_live = '{$this->_islive}'", $query_params);
 
     if (!isset($stripe_plan_query)) {
       $formatted_amount = '$' . number_format(($amount / 100), 2);
@@ -594,7 +562,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
         1 => array($plan_id, 'String'),
       );
       CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_plans (plan_id, is_live)
-        VALUES (%1, '$transaction_mode')", $query_params);
+        VALUES (%1, '{$this->_islive}')", $query_params);
     }
 
     // If a contact/customer has an existing active recurring
@@ -623,7 +591,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
 
     $existing_subscription_query = CRM_Core_DAO::singleValueQuery("SELECT invoice_id
       FROM civicrm_stripe_subscriptions
-      WHERE customer_id = %1 AND is_live = '$transaction_mode'", $query_params);
+      WHERE customer_id = %1 AND is_live = '{$this->_islive}'", $query_params);
 
     if (!empty($existing_subscription_query)) {
       // Cancel existing Recurring Contribution in CiviCRM.
@@ -658,14 +626,14 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     if (empty($installments)) {
       CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_subscriptions
         (customer_id, invoice_id, is_live)
-        VALUES (%1, %2, '$transaction_mode')", $query_params);
+        VALUES (%1, %2, '{$this->_islive}')", $query_params);
     }
     else {
       // Add the end time to the query params.
       $query_params[3] = array($end_time, 'Integer');
       CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_subscriptions
         (customer_id, invoice_id, end_time, is_live)
-        VALUES (%1, %2, %3, '$transaction_mode')", $query_params);
+        VALUES (%1, %2, %3, '{$this->_islive}')", $query_params);
     }
 
     $params['trxn_id'] = $stripe_response->id;

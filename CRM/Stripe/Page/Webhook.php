@@ -94,51 +94,40 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
           $recur_contrib_query->campaign_id = 0;
         }
 
-        $query_params = array(
-          1 => array($invoice_id, 'String'),
-        );
-        $first_contrib_check = CRM_Core_DAO::singleValueQuery("SELECT id
-          FROM civicrm_contribution
-          WHERE invoice_id = %1
-          AND contribution_status_id = '2'", $query_params);
+        //Check whether there is a contribution with
+        //this invoice_id that has a contribution status of Pending
+        $first_contrib_check = civicrm_api3('Contribution', 'get', array(
+            'sequential' => 1,
+            'return' => "id",
+            'invoice_id' => $invoice_id,
+            'contribution_status_id' => "Pending",
+            'contribution_test' => $test_mode
+        ));
 
-        if (!empty($first_contrib_check)) {
-          $query_params = array(
-            1 => array($first_contrib_check, 'Integer'),
-          );
-          CRM_Core_DAO::executeQuery("UPDATE civicrm_contribution
-            SET contribution_status_id = '1'
-            WHERE id = %1",
-            $query_params);
+        //If there is, set its contribution status to Completed and then return
+        if (!empty($first_contrib_check['id'])) {
+          $result = civicrm_api3('Contribution', 'completetransaction', array(
+              'sequential' => 1,
+              'id' => $first_contrib_check['id']
+          ));
 
           return;
         }
 
-        // Create this instance of the contribution for accounting in CiviCRM.
-        $query_params = array(
-          1 => array($recur_contrib_query->contact_id, 'Integer'),
-          2 => array($recur_contrib_query->{$financial_field}, 'Integer'),
-          3 => array($recur_contrib_query->payment_instrument_id, 'Integer'),
-          4 => array($recieve_date, 'String'),
-          5 => array($total_amount, 'String'),
-          6 => array($fee_amount, 'String'),
-          7 => array($net_amount, 'String'),
-          8 => array($transaction_id, 'String'),
-          9 => array($new_invoice_id, 'String'),
-          10 => array($recur_contrib_query->currency, 'String'),
-          11 => array($recur_contrib_query->id, 'Integer'),
-          12 => array($recur_contrib_query->is_test, 'Integer'),
-          13 => array($recur_contrib_query->campaign_id, 'Integer'),
-        );
-        CRM_Core_DAO::executeQuery("INSERT INTO civicrm_contribution (
-          contact_id, {$financial_field}, payment_instrument_id, receive_date,
-          total_amount, fee_amount, net_amount, trxn_id, invoice_id, currency,
-          contribution_recur_id, is_test, contribution_status_id, campaign_id
-          ) VALUES (
-          %1, %2, %3, %4,
-          %5, %6, %7, %8, %9, %10,
-          %11, %12, '1', %13)",
-          $query_params);
+        /* Get the original contribution with that invoice_id */
+        $original_contribution = civicrm_api3('Contribution', 'get', array(
+            'sequential' => 1,
+            'return' => "id",
+            'invoice_id' => $invoice_id,
+            'contribution_test' => $test_mode
+        ));
+
+        /* Create a copy record of the original contribution and sent out email receipt */
+        $result = civicrm_api3('Contribution', 'repeattransaction', array(
+            'sequential' => 1,
+            'original_contribution_id' => $original_contribution['id'],
+            'contribution_status_id' => "Completed"
+        ));
 
           if (!empty($end_time) && $time_compare > $end_time) {
             $end_date = date("Y-m-d H:i:s", $end_time);

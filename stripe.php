@@ -183,6 +183,9 @@ function stripe_civicrm_buildForm($formName, &$form) {
  * that processor.
  */
 function stripe_get_key($form) {
+  if (empty($form->_paymentProcessor)) {
+    return;
+  }
   // Only return first value if Stripe is the only/default.
   if ($form->_paymentProcessor['payment_processor_type'] == 'Stripe') {
     if (isset($form->_paymentProcessor['password'])) {

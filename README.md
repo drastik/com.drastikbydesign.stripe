@@ -8,7 +8,7 @@ CONFIGURATION
 -------------
 All configuration is in the standard Payment Processors settings area in CiviCRM admin.  
 
-WEBHOOK
+WEBHOOK & RECURRING PAYMENTS
 ---------
 The Webhook.php file is registered to the path of civicrm/stripe/webhook  
 You will have to make a Webhook rule in your Stripe.com account and enter this path for recurring charges to end!  
@@ -30,8 +30,8 @@ GOOD TO KNOW
 ------------
 * The stripe-php package has been added to this project & no longer needs to be  
 downloaded separately.  
-* You do not need the civicrm_stripe CMS module for 4.2 & up  
-* There will no longer be branches for each version.  THe branches will be:  
+* You do not need the separate civicrm_stripe CMS module for 4.2 & up  
+* There will no longer be branches for each version.  The branches will be:  
   * Civi's major.minor-dev, and we will create releases (tags) for each new release version.  
     * Example: 4.6-dev.  
 

@@ -49,53 +49,40 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
 
         if (!empty($rel_info_query)) {
           $rel_info_query->fetch();
-          $invoice_id = $rel_info_query->invoice_id;
-          $end_time = $rel_info_query->end_time;
-        }
-        else {
-          CRM_Core_Error::Fatal("Error relating this customer ($customer_id) to the one in civicrm_stripe_subscriptions");
-          exit();
+
+          if(!empty($rel_info_query->invoice_id)) {
+            $invoice_id = $rel_info_query->invoice_id;
+            $end_time = $rel_info_query->end_time;
+          } else {
+            CRM_Core_Error::Fatal("Error relating this customer ($customer_id) to the one in civicrm_stripe_subscriptions");
+            exit();
+          }
         }
 
         // Compare against now + 24hrs to prevent charging 1 extra day.
         $time_compare = time() + 86400;
 
-        // As of 4.3, contribution_type_id column renamed to financial_type_id.
-        $financial_field = 'contribution_type_id';
-        $civi_version = CRM_Utils_System::version();
-        if ($civi_version >= 4.3) {
-          $financial_field = 'financial_type_id';
-        }
-        // Fetch Civi's info about this recurring object.
-        $query_params = array(
-          1 => array($invoice_id, 'String'),
-        );
-        $recur_contrib_query = CRM_Core_DAO::executeQuery("SELECT id, contact_id, currency, contribution_status_id, is_test, {$financial_field}, payment_instrument_id, campaign_id
-          FROM civicrm_contribution_recur
-          WHERE invoice_id = %1",
-          $query_params);
+        // Fetch Civi's info about this recurring contribution
+        $recurring_contribution = civicrm_api3('ContributionRecur', 'get', array(
+            'sequential' => 1,
+            'return' => array("id", "contribution_status_id"),
+            'invoice_id' => $invoice_id
+        ));
 
-        if (!empty($recur_contrib_query)) {
-          $recur_contrib_query->fetch();
-        }
-        else {
+        if(!$recurring_contribution['id']) {
           CRM_Core_Error::Fatal("ERROR: Stripe triggered a Webhook on an invoice not found in civicrm_contribution_recur: " . $stripe_event_data);
           exit();
         }
+
         // Build some params.
         $stripe_customer = Stripe_Customer::retrieve($customer_id);
-        $recieve_date = date("Y-m-d H:i:s", $charge->created);
-        $total_amount = $charge->amount / 100;
-        $fee_amount = isset($charge->fee) ? ($charge->fee / 100) : 0;
-        $net_amount = $total_amount - $fee_amount;
         $transaction_id = $charge->id;
-        $new_invoice_id = $stripe_event_data->data->object->id;
-        if (empty($recur_contrib_query->campaign_id)) {
-          $recur_contrib_query->campaign_id = 0;
-        }
 
-        //Check whether there is a contribution with
-        //this invoice_id that has a contribution status of Pending
+        //Currently (Oct 2015) contribution.repeattransaction does not
+        //insert an invoice_id in the civicrm_contribution table
+        //$new_invoice_id = $stripe_event_data->data->object->id;
+
+        //Check whether there is a contribution instance with this invoice_id that is Pending
         $first_contrib_check = civicrm_api3('Contribution', 'get', array(
             'sequential' => 1,
             'return' => "id",
@@ -104,7 +91,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
             'contribution_test' => $test_mode
         ));
 
-        //If there is, set its contribution status to Completed and then return
+        //If there is, set its status to Completed and then return
         if (!empty($first_contrib_check['id'])) {
           $result = civicrm_api3('Contribution', 'completetransaction', array(
               'sequential' => 1,
@@ -114,7 +101,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
           return;
         }
 
-        /* Get the original contribution with that invoice_id */
+        //Get the original contribution with this invoice_id
         $original_contribution = civicrm_api3('Contribution', 'get', array(
             'sequential' => 1,
             'return' => "id",
@@ -122,11 +109,13 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
             'contribution_test' => $test_mode
         ));
 
-        /* Create a copy record of the original contribution and sent out email receipt */
+        //Create a copy record of the original contribution and send out email receipt
         $result = civicrm_api3('Contribution', 'repeattransaction', array(
             'sequential' => 1,
             'original_contribution_id' => $original_contribution['id'],
-            'contribution_status_id' => "Completed"
+            'contribution_status_id' => "Completed",
+            'trxn_id' => $transaction_id //Insert new transaction ID
+            //'invoice_id' => $new_invoice_id - contribution.repeattransaction doesn't support it currently
         ));
 
           if (!empty($end_time) && $time_compare > $end_time) {
@@ -151,14 +140,16 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
             return;
           }
 
-          // Successful charge & more to come so set recurring contribution status to In Progress.
-          $query_params = array(
-            1 => array($invoice_id, 'String'),
-          );
-          if ($recur_contrib_query->contribution_status_id != 5) {
-            CRM_Core_DAO::executeQuery("UPDATE civicrm_contribution_recur
-              SET contribution_status_id = 5
-              WHERE invoice_id = %1", $query_params);
+          // Successful charge & more to come
+          //so check if this recurring contribution has a status different than In Progress
+          if($recurring_contribution['values'][0]['contribution_status_id'] != 5) {
+
+            //If so, set its status to In Progress
+            $result = civicrm_api3('ContributionRecur', 'create', array(
+                'sequential' => 1,
+                'id' => $recurring_contribution['id'],
+                'contribution_status_id' => "In Progress"
+            ));
 
             return;
           }

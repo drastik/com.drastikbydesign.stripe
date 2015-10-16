@@ -266,6 +266,59 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
 
         break;
 
+
+      //Subscription is cancelled
+      case 'customer.subscription.deleted':
+
+        // Find the recurring contribution in CiviCRM by mapping it from Stripe.
+        $query_params = array(
+            1 => array($customer_id, 'String'),
+        );
+        $rel_info_query = CRM_Core_DAO::executeQuery("SELECT invoice_id
+          FROM civicrm_stripe_subscriptions
+          WHERE customer_id = %1",
+            $query_params);
+
+        if (!empty($rel_info_query)) {
+          $rel_info_query->fetch();
+
+          if (!empty($rel_info_query->invoice_id)) {
+            $invoice_id = $rel_info_query->invoice_id;
+          } else {
+            CRM_Core_Error::Fatal("Error relating this customer ($customer_id) to the one in civicrm_stripe_subscriptions");
+            exit();
+          }
+        }
+
+        // Fetch Civi's info about this recurring contribution
+        $recur_contribution = civicrm_api3('ContributionRecur', 'get', array(
+          'sequential' => 1,
+          'return' => "id",
+          'invoice_id' => $invoice_id
+        ));
+
+        if (!$recur_contribution['id']) {
+          CRM_Core_Error::Fatal("ERROR: Stripe triggered a Webhook on an invoice not found in civicrm_contribution_recur: "
+              . $stripe_event_data);
+          exit();
+        }
+
+        //Cancel the recurring contribution
+        $result = civicrm_api3('ContributionRecur', 'cancel', array(
+            'sequential' => 1,
+            'id' => $recur_contribution['id']
+        ));
+
+        //Delete the record from Stripe's subscriptions table
+        $query_params = array(
+            1 => array($invoice_id, 'String'),
+        );
+        CRM_Core_DAO::executeQuery("DELETE FROM civicrm_stripe_subscriptions
+              WHERE invoice_id = %1", $query_params);
+
+        break;
+
+
       // One-time donation and per invoice payment.
       case 'charge.succeeded':
         // Not implemented.

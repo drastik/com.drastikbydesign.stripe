@@ -143,9 +143,11 @@
       if ($('#priceset').length) {
         additionalParticipants = cj("#additional_participants").val();
         // The currentTotal is already being calculated in Form/Contribution/Main.tpl.
-        if (currentTotal == 0 && !additionalParticipants) {
-          // This is also hit when "Going back", but we already have stripe_token.
-          return true;
+        if(typeof currentTotal !== 'undefined') {
+          if (currentTotal == 0 && !additionalParticipants) {
+            // This is also hit when "Going back", but we already have stripe_token.
+            return true;
+          }
         }
       }
 

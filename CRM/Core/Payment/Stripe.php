@@ -263,7 +263,9 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       $card_details = $params['stripe_token'];
     }
     else {
-      CRM_Core_Error::fatal(ts('Stripe.js token was not passed!  Report this message to the site administrator.'));
+      if (stripe_get_submission_method() != 'php') {
+        CRM_Core_Error::fatal(ts('Stripe.js token was not passed!  Report this message to the site administrator.'));
+      }
     }
 
     // Check for existing customer, create new otherwise.
@@ -316,12 +318,10 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       FROM civicrm_stripe_customers
       WHERE email = %1 AND is_live = '{$this->_islive}'", $query_params);
 
-    /****
-     * If for some reason you cannot use Stripe.js and you are aware of PCI Compliance issues,
-     * here is the alternative to Stripe.js:
-     ****/
+    if (stripe_get_submission_method() == 'php') {
+      // If for some reason you cannot use Stripe.js and you are aware of PCI Compliance issues,
+      // here is the alternative to Stripe.js:
 
-    /*
       // Get Cardholder's full name.
       $cc_name = $params['first_name'] . " ";
       if (strlen($params['middle_name']) > 0) {
@@ -340,7 +340,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
         'address_state' => $params['state_province'],
         'address_zip' => $params['postal_code'],
       );
-    */
+    }
 
     // drastik - Uncomment this for Drupal debugging to dblog.
     /*

@@ -125,6 +125,9 @@ function stripe_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
  * @param $errors - Reference to the errors array.
  */
 function stripe_civicrm_validateForm($formName, &$fields, &$files, &$form, &$errors) {
+  if (stripe_get_submission_method() == 'php') {
+    return;
+  }
   if (empty($form->_paymentProcessor['payment_processor_type'])) {
     return;
   }
@@ -150,6 +153,9 @@ function stripe_civicrm_validateForm($formName, &$fields, &$files, &$form, &$err
  * @param $form - reference to the form object
  */
 function stripe_civicrm_buildForm($formName, &$form) {
+  if (stripe_get_submission_method() == 'php') {
+    return;
+  }
   $stripe_key = stripe_get_key($form);
   // If this is not a form Stripe is involved in, do nothing.
   if (empty($stripe_key)) {
@@ -271,4 +277,22 @@ function stripe_civicrm_managed(&$entities) {
   );
 
   return _stripe_civix_civicrm_managed($entities);
+}
+
+/**
+ * Return the Stripe credit card submission method.
+ *
+ * By default submit via javascript. Optionally, you can submit via PHP.
+ * The advantage of submitting via javascript is that the credit card
+ * details never touch your server so it's more secure. The problem is
+ * that the code to trigger the submission is fragile and is prone to
+ * errors. If you want to submit via PHP, add the following line to your
+ * civicrm.settings.php file:
+ * define('STRIPE_SUBMISSION_METHOD', 'php');
+ */
+function stripe_get_submission_method() {
+  if (defined('STRIPE_SUBMISSION_METHOD') && STRIPE_SUBMISSION_METHOD == 'php') {
+    return 'php';
+  }
+  return 'js';
 }

@@ -575,8 +575,8 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     // subscription per customer, we have to cancel the existing active
     // subscription first.
     $subscriptions = $stripe_customer->offsetGet('subscriptions');
-	  $data = $subscriptions->offsetGet('data');
-	  $status = $data[0]->offsetGet('status');
+    $data = $subscriptions->offsetGet('data');
+    $status = $data[0]->offsetGet('status');
     
     if (!empty($subscriptions) && $status == 'active') {
       $stripe_customer->cancelSubscription();

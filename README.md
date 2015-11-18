@@ -26,6 +26,13 @@ For CiviCRM 4.4 & up:
 
 2)  Install extension via CiviCRM's "Manage Extensions" page.  
 
+CANCELLING RECURRING CONTRIBUTIONS
+------------
+You can cancel a recurring contribution from the Stripe.com dashboard. Go to Customers and then to the specific customer.
+Inside the customer you will see a Subscriptions section. Click Cancel on the subscription you want to cancel.
+Stripe.com will cancel the subscription and will send a webhook to your site (if you have set the webhook options correctly).
+ Then the stripe_civicrm extension will process the webhook and cancel the Civi recurring contribution.
+
 GOOD TO KNOW
 ------------
 * The stripe-php package has been added to this project & no longer needs to be  

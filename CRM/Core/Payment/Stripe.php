@@ -576,10 +576,13 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     // subscription first.
     $subscriptions = $stripe_customer->offsetGet('subscriptions');
     $data = $subscriptions->offsetGet('data');
-    $status = $data[0]->offsetGet('status');
     
-    if (!empty($subscriptions) && $status == 'active') {
-      $stripe_customer->cancelSubscription();
+    if(!empty($data)) {
+      $status = $data[0]->offsetGet('status');
+
+      if ($status == 'active') {
+        $stripe_customer->cancelSubscription();
+      }
     }
 
     // Attach the Subscription to the Stripe Customer.

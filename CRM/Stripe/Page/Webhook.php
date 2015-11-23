@@ -90,9 +90,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
         $net_amount = $total_amount - $fee_amount;
         $transaction_id = $charge->id;
         $new_invoice_id = $stripe_event_data->data->object->id;
-        if (empty($recur_contrib_query->campaign_id)) {
-          $recur_contrib_query->campaign_id = 0;
-        }
+        
 
         $query_params = array(
           1 => array($invoice_id, 'String'),
@@ -128,8 +126,18 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
           10 => array($recur_contrib_query->currency, 'String'),
           11 => array($recur_contrib_query->id, 'Integer'),
           12 => array($recur_contrib_query->is_test, 'Integer'),
-          13 => array($recur_contrib_query->campaign_id, 'Integer'),
         );
+
+        // We have to add campaign_id manually because it could be an integer
+        // or it could be NULL and CiviCRM can't validate something that could
+        // be either.;
+        if (!empty($recur_contrib_query->campaign_id)) {
+          // If it's a number, ensure it's an intval to avoid injection attack.
+          $campaign_id = intval($recur_contrib_query->campaign_id);
+        }
+        else {
+          $campaign_id = 'NULL';
+        }
         CRM_Core_DAO::executeQuery("INSERT INTO civicrm_contribution (
           contact_id, {$financial_field}, payment_instrument_id, receive_date,
           total_amount, fee_amount, net_amount, trxn_id, invoice_id, currency,
@@ -137,7 +145,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
           ) VALUES (
           %1, %2, %3, %4,
           %5, %6, %7, %8, %9, %10,
-          %11, %12, '1', %13)",
+          %11, %12, '1', $campaign_id)",
           $query_params);
 
           if (!empty($end_time) && $time_compare > $end_time) {

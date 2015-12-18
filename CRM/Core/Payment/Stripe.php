@@ -636,10 +636,6 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
         VALUES (%1, %2, %3, '{$this->_islive}')", $query_params);
     }
 
-    $params['trxn_id'] = $stripe_response->id;
-    $params['fee_amount'] = $stripe_response->fee / 100;
-    $params['net_amount'] = $params['amount'] - $params['fee_amount'];
-
     return $params;
   }
 

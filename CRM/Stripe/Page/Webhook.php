@@ -77,13 +77,18 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
         // Build some params.
         $stripe_customer = Stripe_Customer::retrieve($customer_id);
         $transaction_id = $charge->id;
-
+        
+        //get the balance_transaction object and retrieve the Stripe fee from it
+        $balance_transaction_id = $charge->balance_transaction;
+        $balance_transaction = Stripe_BalanceTransaction::retrieve($balance_transaction_id);
+        $fee = $balance_transaction->fee / 100;
+        
         //Currently (Oct 2015) contribution.repeattransaction does not
         //insert an invoice_id in the civicrm_contribution table
         //$new_invoice_id = $stripe_event_data->data->object->id;
 
         //Check whether there is a contribution instance with this invoice_id that is Pending
-        $first_contrib_check = civicrm_api3('Contribution', 'get', array(
+        $pending_contrib_check = civicrm_api3('Contribution', 'get', array(
             'sequential' => 1,
             'return' => "id",
             'invoice_id' => $invoice_id,
@@ -91,12 +96,14 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
             'contribution_test' => $test_mode
         ));
 
-        //If there is, set its status to Completed and then return
-        if (!empty($first_contrib_check['id'])) {
+        //If there is, complete it, set its trxn_id and fee and then return
+        if (!empty($pending_contrib_check['id'])) {
           $result = civicrm_api3('Contribution', 'completetransaction', array(
               'sequential' => 1,
-              'id' => $first_contrib_check['id']
-          ));
+              'id' => $pending_contrib_check['id'],
+              'trxn_id' => $transaction_id,
+              'fee_amount' => $fee
+          );)
 
           return;
         }

@@ -7,6 +7,7 @@ More info on how to change:  https://stripe.com/docs/upgrades#how-can-i-upgrade-
 CONFIGURATION
 -------------
 All configuration is in the standard Payment Processors settings area in CiviCRM admin.  
+You will enter your "Publishable" & "Secret" key given by stripe.com.  
 
 WEBHOOK & RECURRING PAYMENTS
 ---------
@@ -50,4 +51,5 @@ https://drupal.org/user/433663
 
 OTHER CREDITS
 -------------
-Big thanks to rgburton & Swingline0 for adding wonderful new features to the project.
+For bug fixes, new features, and documentiation, thanks to:
+rgburton, Swingline0, BorislavZlatanov, agh1, & jmcclelland

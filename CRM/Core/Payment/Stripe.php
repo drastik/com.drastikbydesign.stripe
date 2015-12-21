@@ -574,8 +574,15 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     // card to be charged immediately.  So, since Stripe only supports one
     // subscription per customer, we have to cancel the existing active
     // subscription first.
-    if (!empty($stripe_customer->subscription) && $stripe_customer->subscription->status == 'active') {
-      $stripe_customer->cancelSubscription();
+    $subscriptions = $stripe_customer->offsetGet('subscriptions');
+    $data = $subscriptions->offsetGet('data');
+    
+    if(!empty($data)) {
+      $status = $data[0]->offsetGet('status');
+
+      if ($status == 'active') {
+        $stripe_customer->cancelSubscription();
+      }
     }
 
     // Attach the Subscription to the Stripe Customer.

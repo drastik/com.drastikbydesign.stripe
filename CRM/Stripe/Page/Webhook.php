@@ -103,7 +103,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
               'id' => $pending_contrib_check['id'],
               'trxn_id' => $transaction_id,
               'fee_amount' => $fee
-          );)
+          ));
 
           return;
         }

@@ -314,7 +314,8 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
 
     $customer_query = CRM_Core_DAO::singleValueQuery("SELECT id
       FROM civicrm_stripe_customers
-      WHERE email = %1 AND is_live = '{$this->_islive}'", $query_params);
+      WHERE email = %1 AND is_live = '{$this->_islive}'
+      AND ppid = '{$this->_paymentProcessor['id']}'", $query_params);
 
     /****
      * If for some reason you cannot use Stripe.js and you are aware of PCI Compliance issues,
@@ -371,7 +372,8 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
         );
 
         CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_customers
-          (email, id, is_live) VALUES (%1, %2, '{$this->_islive}')", $query_params);
+          (email, id, is_live, ppid) VALUES 
+          (%1, %2, '{$this->_islive}', '{$this->_paymentProcessor['id']}')", $query_params);
       }
       else {
         CRM_Core_Error::fatal(ts('There was an error saving new customer within Stripe.  Is Stripe down?'));
@@ -423,15 +425,17 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
             1 => array($email, 'String'),
           );
           CRM_Core_DAO::executeQuery("DELETE FROM civicrm_stripe_customers
-            WHERE email = %1 AND is_live = '{$this->_islive}'", $query_params);
+            WHERE email = %1 AND is_live = '{$this->_islive}'
+            AND ppid = '{$this->_paymentProcessor['id']}'", $query_params);
 
           // Create new record for this customer.
           $query_params = array(
             1 => array($email, 'String'),
             2 => array($stripe_customer->id, 'String'),
           );
-          CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_customers (email, id, is_live)
-            VALUES (%1, %2, '{$this->_islive}')", $query_params);
+          CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_customers
+            (email, id, is_live, ppid) VALUES 
+            (%1, %2, '{$this->_islive}', '{$this->_paymentProcessor['id']}')", $query_params);
         }
         else {
           // Customer was found in civicrm_stripe database, but unable to be

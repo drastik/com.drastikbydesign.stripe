@@ -32,6 +32,7 @@ function stripe_civicrm_install() {
     `email` varchar(64) COLLATE utf8_unicode_ci DEFAULT NULL,
     `id` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
     `is_live` tinyint(4) NOT NULL COMMENT 'Whether this is a live or test transaction',
+    `ppid` smallint(4) UNSIGNED NOT NULL COMMENT 'Payment Processor ID',
     UNIQUE KEY `id` (`id`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
   ");

@@ -280,7 +280,6 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
 
         // Find the recurring contribution in CiviCRM by mapping it from Stripe.
         $original_invoice_id = getOrigInvoiceId($subscription_id);
-        getOrigInvoiceId($subscription_id);
 
         // Fetch Civi's info about this recurring contribution
         $recur_contribution = civicrm_api3('ContributionRecur', 'get', array(

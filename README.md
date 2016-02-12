@@ -27,6 +27,8 @@ For CiviCRM 4.4 & up:
 
 2)  Install extension via CiviCRM's "Manage Extensions" page.  
 
+----->_See UPGRADE.txt_
+
 CANCELLING RECURRING CONTRIBUTIONS
 ------------
 You can cancel a recurring contribution from the Stripe.com dashboard. Go to Customers and then to the specific customer.

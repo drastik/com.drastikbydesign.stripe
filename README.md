@@ -12,6 +12,7 @@ WEBHOOK & RECURRING PAYMENTS
 ---------
 The Webhook.php file is registered to the path of civicrm/stripe/webhook  
 You will have to make a Webhook rule in your Stripe.com account and enter this path for recurring charges to end!  
+Set up two disctinct webhooks, one for live and one for testing.
 For Drupal:  https://example.com/civicrm/stripe/webhook  
 For Joomla:  https://example.com/index.php/component/civicrm/?task=civicrm/stripe/webhook  
 For Wordpress:  https://example.com/?page=CiviCRM&q=civicrm/stripe/webhook  

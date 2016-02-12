@@ -571,7 +571,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     // civicrm_stripe_subscription table, instead of using customer_id to derive 
     // the invoice_id.  The proposed default behavor should be to always create a
     // new subscription. If it's not,  we run the risk of clobbering a subscription
-    // we wanted to keep. This is especially importanti because gift memberships 
+    // we wanted to keep. This is especially important because gift memberships 
     // will be a thing at some point.  An active member may wish to purchase the 
     // same membership level for someone else. Doing so shouldn't mess with their
     // current subscription.
@@ -586,13 +586,10 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     // membships per user, so we know we can always safely remove these recurring
     // contributions and re-add a the one of a different value, then update the 
     // subscription. We just need to be sensitive to the gif memebrshps if/when 
-    // they happen. 
+    // they happen. Todo: Determine if recurring contribution is for a membership
+    // upgrade/downgrade and update the subscription instead of needing human 
+    // intervention to delete the current subscription within the Stripe UI.  
 
-    // Proposed Flow should be: Is this for a membership? Yes-> Does the recipent already 
-    // have one? Yes -> Delete and recreate the record in subscription table. 
-    //           No  -> Create a new subscription. 
-    // Hopefully when the gift memebrsbhip support is working, we will have access to 
-    // something like honor_id to find the recipient.          
 
 
     // Some of this can be recycled when we know how to update a specific subscription.
@@ -609,49 +606,47 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       }
     }
     */     
-     
     // Attach the Subscription to the Stripe Customer.
     $cust_sub_params = array(
       'prorate' => FALSE,
       'plan' => $plan_id,
     );
+
     $stripe_response = $stripe_customer->subscriptions->create($cust_sub_params);
-    // Prepare escaped query params.
-    $query_params = array(
-      1 => array($stripe_customer->id, 'String'),
-    );
-    
-    // Calculate timestamp for the last installment.
-    $end_time = strtotime("+{$installments} {$frequency}");
+    $subscription_id = $stripe_response->id;
     $invoice_id = $params['invoiceID'];
 
     // Prepare escaped query params.
     $query_params = array(
-      1 => array($stripe_customer->id, 'String'),
-      2 => array($invoice_id, 'String'),
+      1 => array($subscription_id, 'String'),
+      2 => array($stripe_customer->id, 'String'),
+      3 => array($invoice_id, 'String'),
     );
 
-    // Insert the new Stripe Subscription info.
-    // Set subscription_id to invoice_id as a placeholder since the webhook
-    // fills that in for us. 
+    // Insert the Stripe Subscription info.
     
     // Set end_time to NULL if installments are ongoing indefinitely
     if (empty($installments)) {
       CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_subscriptions
         (subscription_id, customer_id, invoice_id, is_live)
-        VALUES (%2, %1, %2, '{$this->_islive}')", $query_params);
+        VALUES (%1, %2, %3, '{$this->_islive}')", $query_params);
     }
     else {
+      // Calculate timestamp for the last installment.
+      $end_time = strtotime("+{$installments} {$frequency}");
       // Add the end time to the query params.
-      $query_params[3] = array($end_time, 'Integer');
+      $query_params[4] = array($end_time, 'Integer');
       CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_subscriptions
         (subscription_id, customer_id, invoice_id, end_time, is_live)
-        VALUES (%2, %1, %2, %3, '{$this->_islive}')", $query_params);
+        VALUES (%1, %2, %3, %4, '{$this->_islive}')", $query_params);
     }
 
-    $params['trxn_id'] = $stripe_response->id;
-    $params['fee_amount'] = $stripe_response->fee / 100;
-    $params['net_amount'] = $params['amount'] - $params['fee_amount'];
+    // For non-recurring charges we set a contribution's trxn_id to the Stripe charge id. 
+    // We don't get a charge id back with create subscription, although it initiates a charge.
+    // We're changing this to the charge id using the webnhook when we insert fee_amount and 
+    // net_amount.  
+     
+    $params['trxn_id'] = $subscription_id;
 
     return $params;
   }

@@ -565,35 +565,35 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
         VALUES (%1, '{$this->_islive}')", $query_params);
     }
 
-    // As of Feb. 2014, Stripe handles multiple subscriptions per customer, even 
+    // As of Feb. 2014, Stripe handles multiple subscriptions per customer, even
     // ones of the exact same plan. To pave the way for that kind of support here,
-    // were using subscription_id as the unique identifier in the 
-    // civicrm_stripe_subscription table, instead of using customer_id to derive 
+    // were using subscription_id as the unique identifier in the
+    // civicrm_stripe_subscription table, instead of using customer_id to derive
     // the invoice_id.  The proposed default behavor should be to always create a
     // new subscription. If it's not,  we run the risk of clobbering a subscription
-    // we wanted to keep. This is especially important because gift memberships 
-    // will be a thing at some point.  An active member may wish to purchase the 
+    // we wanted to keep. This is especially important because gift memberships
+    // will be a thing at some point.  An active member may wish to purchase the
     // same membership level for someone else. Doing so shouldn't mess with their
     // current subscription.
 
-    // Keeping track of subscription_id in this context makes it easy to process 
-    // recurring contributions with the api contribution.repeattrasaction, which in turn 
-    // now gives us full support for Auto-Renew Memberships. \o/ 
+    // Keeping track of subscription_id in this context makes it easy to process
+    // recurring contributions with the api contribution.repeattrasaction, which in turn
+    // now gives us full support for Auto-Renew Memberships. \o/
 
     // Opposite to the gift membership scenerio, there are times when we _do_
-    // want to update an existing subscription. One such time is when we're doing a 
-    // membership upgrade/downgrade. CiviCRM doesn't allow multiple concurrent 
+    // want to update an existing subscription. One such time is when we're doing a
+    // membership upgrade/downgrade. CiviCRM doesn't allow multiple concurrent
     // membships per user, so we know we can always safely remove these recurring
-    // contributions and re-add a the one of a different value, then update the 
-    // subscription. We just need to be sensitive to the gif memebrshps if/when 
+    // contributions and re-add a the one of a different value, then update the
+    // subscription. We just need to be sensitive to the gift memebrshps if/when
     // they happen. Todo: Determine if recurring contribution is for a membership
-    // upgrade/downgrade and update the subscription instead of needing human 
-    // intervention to delete the current subscription within the Stripe UI.  
+    // upgrade/downgrade and update the subscription instead of needing human
+    // intervention to delete the current subscription within the Stripe UI. 
 
 
 
     // Some of this can be recycled when we know how to update a specific subscription.
-    // For now we're only creating new subscriptions. 
+    // For now we're only creating new subscriptions.
     /*
     $subscriptions = $stripe_customer->offsetGet('subscriptions');
     $data = $subscriptions->offsetGet('data');

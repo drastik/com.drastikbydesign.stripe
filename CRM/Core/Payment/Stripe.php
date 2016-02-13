@@ -572,7 +572,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     // the invoice_id.  The proposed default behavor should be to always create a
     // new subscription. If it's not,  we run the risk of clobbering a subscription
     // we wanted to keep. This is especially important because gift memberships
-    // will be a thing at some point.  An active member may wish to purchase the 
+    // will be a thing at some point.  An active member may wish to purchase the
     // same membership level for someone else. Doing so shouldn't mess with their
     // current subscription.
 
@@ -589,7 +589,6 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     // they happen. Todo: Determine if recurring contribution is for a membership
     // upgrade/downgrade and update the subscription instead of needing human
     // intervention to delete the current subscription within the Stripe UI.
-
 
 
     // Some of this can be recycled when we know how to update a specific subscription.
@@ -641,8 +640,6 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
         VALUES (%1, %2, %3, %4, '{$this->_islive}')", $query_params);
     }
 
-<<<<<<< HEAD
-=======
     // For non-recurring charges we set a contribution's trxn_id to the Stripe charge id. 
     // We don't get a charge id back with create subscription, although it initiates a charge.
     // We're changing this to the charge id using the webnhook when we insert fee_amount and 
@@ -650,7 +647,6 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
      
     $params['trxn_id'] = $subscription_id;
 
->>>>>>> 31818a3... Fix code for adding fees in webhook for recurring and only retreive from Stripe when needed. Refactor code that gets orig invoice. Add email sending to repeattrasaction. Fix broken Stripe.php.  Switch to api wherever possible.
     return $params;
   }
 

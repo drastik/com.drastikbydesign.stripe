@@ -1,4 +1,4 @@
-As of 2/12/14 there is no proper upgrade script to use this code with an existing
+As of 2/12/16 there is no proper upgrade script to use this code with an existing
 installation.  You can use if you know what you're doing and are prepared to make 
 changes to your database.  Here's what you should be aware of.  Your data is in 
 bad shape if you have subscriptions. The fees are missing from any subscription 

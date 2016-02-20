@@ -46,6 +46,7 @@ function stripe_civicrm_install() {
 
   CRM_Core_DAO::executeQuery("
   CREATE TABLE IF NOT EXISTS `civicrm_stripe_subscriptions` (
+    `subscription_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
     `customer_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
     `invoice_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
     `end_time` int(11) NOT NULL DEFAULT '0',

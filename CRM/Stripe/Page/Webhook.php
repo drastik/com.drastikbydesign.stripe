@@ -8,7 +8,7 @@ require_once 'CRM/Core/Page.php';
 
 class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
   function run() {
-    function getOrigInvoiceId($subscription_id) {
+    function getOrigInvoice($subscription_id) {
 
         $query_params = array(
           1 => array($subscription_id, 'String'),
@@ -20,14 +20,14 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
 
         if (!empty($sub_info_query)) {
           $sub_info_query->fetch();
-          $end_time = $sub_info_query->end_time;
-          $original_invoice_id = $sub_info_query->invoice_id;
+          $original_invoice->end_time = $sub_info_query->end_time;
+          $original_invoice->id = $sub_info_query->invoice_id;
         }
         else {
           CRM_Core_Error::Fatal("Error relating this subscription id ($subscription_id) to the one in civicrm_stripe_subscriptions for customer with id ($customer_id) ");
           exit();
         }
-        return $original_invoice_id;         
+        return $original_invoice;         
     }
     // Get the data from Stripe.
     $data_raw = file_get_contents("php://input");
@@ -68,7 +68,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
         // Find the original contribution and complete it or repeat it.
 
         // First, get the (original) invoice_id and end_time using subscription id or choke.
-        $original_invoice_id = getOrigInvoiceId($subscription_id);
+        $original_invoice = getOrigInvoice($subscription_id);
 
         // Compare against now + 24hrs to prevent charging 1 extra day.
         $time_compare = time() + 86400;
@@ -77,12 +77,12 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
         $recurring_contribution = civicrm_api3('ContributionRecur', 'get', array(
             'sequential' => 1,
             'return' => array("id", "contribution_status_id"),
-            'invoice_id' => $original_invoice_id,
+            'invoice_id' => $original_invoice->id,
 	    'contribution_test' => $test_mode,
         ));
 
         if(!$recurring_contribution['id']) {
-          CRM_Core_Error::Fatal("ERROR: Stripe triggered a Webhook on an invoice, ($original_invoice_id), ($customer_id) not found in civicrm_contribution_recur: " . $stripe_event_data);
+          CRM_Core_Error::Fatal("ERROR: Stripe triggered a Webhook on an invoice, ($original_invoice->id), ($customer_id) not found in civicrm_contribution_recur: " . $stripe_event_data);
           exit();
 	} else {
 	   $recurring_contribution_id = $recurring_contribution['id'];
@@ -93,7 +93,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
         $orig_contrib = civicrm_api3('Contribution', 'get', array(
             'sequential' => 1,
             'return' => "id,trxn_id,contribution_status_id",
-            'invoice_id' => $original_invoice_id,
+            'invoice_id' => $original_invoice->id,
 	    'contribution_test' => $test_mode,
        ));
 
@@ -156,7 +156,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
 	  }
 
 	} else {
-            CRM_Core_Error::Fatal("ERROR: Stripe triggered a Webhook on an invoice, ($original_invoice_id) not found in civicrm_contribution: " . $stripe_event_data);
+            CRM_Core_Error::Fatal("ERROR: Stripe triggered a Webhook on an invoice, ($original_invoice->id) not found in civicrm_contribution: " . $stripe_event_data);
             exit();
         }
 
@@ -180,8 +180,8 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
           WHERE trxn_id = %2",   
           $query_params);
 
-         if (!empty($end_time) && $time_compare > $end_time) {
-            $end_date = date("Y-m-d H:i:s", $end_time);
+         if (!empty($original_invoice->end_time) && $time_compare > $original_invoice->end_time) {
+            $end_date = date("Y-m-d H:i:s", $original_invoice->end_time);
             // Final payment.  Recurring contribution complete.
             $stripe_customer->cancelSubscription($subscription_id);
 
@@ -193,7 +193,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
          //  Notate the cancel date now that the subscription is up.  
             $query_params = array(
               1 => array($end_date, 'String'),
-              2 => array($original_invoice_id, 'String'),
+              2 => array($original_invoice->id, 'String'),
             );
             CRM_Core_DAO::executeQuery("UPDATE civicrm_contribution_recur 
               SET cancel_date = %1, contribution_status_id = '1'
@@ -230,13 +230,13 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
         $subscription_id = $stripe_event_data->data->object->subscription;
 
         // First, get the (original) invoice_id and end_time using subscription id or choke.
-        $original_invoice_id = getOrigInvoiceId($subscription_id);
+        $original_invoice = getOrigInvoice($subscription_id);
 
         // Fetch the original contribution and find it's status in case it's pending. 
         $orig_contrib = civicrm_api3('Contribution', 'get', array(
             'sequential' => 1,
             'return' => "id,trxn_id,contribution_status_id",
-            'invoice_id' => $original_invoice_id,
+            'invoice_id' => $original_invoice->id,
 	    'contribution_test' => $test_mode,
        ));
 
@@ -279,13 +279,13 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
         $subscription_id = $stripe_event_data->data->object->id;
 
         // Find the recurring contribution in CiviCRM by mapping it from Stripe.
-        $original_invoice_id = getOrigInvoiceId($subscription_id);
+        $original_invoice = getOrigInvoice($subscription_id);
 
         // Fetch Civi's info about this recurring contribution
         $recur_contribution = civicrm_api3('ContributionRecur', 'get', array(
           'sequential' => 1,
           'return' => "id",
-          'invoice_id' => $original_invoice_id
+          'invoice_id' => $original_invoice->id
         ));
 
         if (!$recur_contribution['id']) {

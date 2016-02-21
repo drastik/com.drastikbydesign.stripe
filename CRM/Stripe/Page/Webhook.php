@@ -101,56 +101,26 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
         if (!empty($orig_contrib['values'][0]['contribution_id'])) {
 	  $orig_contrib_id = $orig_contrib['values'][0]['contribution_id'];	
 
-
-	  // For contribs where there is a subscription id in the trxn_id field, the we know the transaction
-	  // is already complete. Because Stripe.php subscription->create charges the customer and sends 
-	  // an invoice.payment.succeded we need to ignore the first one or we'll see a double contribution in Civi.
-	  // Putting the subscription id in the trxn_id field stores state information, so we can ignore the first, 
-	  // and do repeatcontribution all subsequent invoice.payment.succeded events. 
-	   
-	  if ($subscription_id == $orig_contrib['values'][0]['trxn_id']) {
-            //get the balance_transaction object and retrieve the Stripe fee from it
+          // check if contrib is pending and complete it, set it's trxn_id and fee, then return
+	  if ($orig_contrib['values'][0]['contribution_status_id'] == "2") {	
+            // Get fee from Stripe.
             $balance_transaction = Stripe_BalanceTransaction::retrieve($balance_transaction_id);
             $fee = $balance_transaction->fee / 100; 
-            $net = $balance_transaction->net / 100;
-            // api contribution create is how we modify an existing contribution.   
-            $result = civicrm_api3('Contribution', 'create', array(
-	      'sequential' => 1,
+
+            $result = civicrm_api3('Contribution', 'completetransaction', array(
+              'sequential' => 1,
               'id' => $orig_contrib_id,
-	      'fee_amount' => $fee,
-	      'net_amount' => $net,
               'trxn_id' => $charge_id,
-	    ));
-	    // Stash the subscription id in civicrm_contribution_recur for record keeping. invoice id 
-	    // was in two fields anyway.  
+	      'fee_amount' => $fee,
+             ));
+
+	    // Stash the subscription id in civicrm_contribution_recur for record keeping, since it's related
+	    // data. Otherwise, invoice id is in two fields.  
 	    $result = civicrm_api3('ContributionRecur', 'create', array(
 	      'sequential' => 1,
 	      'id' => $recurring_contribution_id,
 	      'trxn_id' => $subscription_id,
 	    ));
-
-	  return;
-          }
-          // check if contrib is pending and complete it, set it's trxn_id and fee, then return
-	  if ($orig_contrib['values'][0]['contribution_status_id'] == "2") {	
-            $result = civicrm_api3('Contribution', 'completetransaction', array(
-              'sequential' => 1,
-              'id' => $orig_contrib_id,
-              'trxn_id' => $charge_id,
-              'is_email_receipt' => 1,
-             ));
-            //  This is repeated code, but keeping it inside conditionals means we hit their servers less.  
-            $balance_transaction = Stripe_BalanceTransaction::retrieve($balance_transaction_id);
-            $fee = $balance_transaction->fee / 100; 
-            $net = $balance_transaction->net / 100;
-
-	    // completetransaction won't modify the fee_amount or net_amount. 
-            $result = civicrm_api3('Contribution', 'create', array(
-	      'sequential' => 1,
-              'id' => $orig_contrib_id,
-	      'fee_amount' => $fee,
-	      'net_amount' => $net,
-	      ));
 
           return;
 	  }

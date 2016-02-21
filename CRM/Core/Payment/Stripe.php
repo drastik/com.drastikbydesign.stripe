@@ -639,13 +639,9 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
         (subscription_id, customer_id, invoice_id, end_time, is_live)
         VALUES (%1, %2, %3, %4, '{$this->_islive}')", $query_params);
     }
-
-    // For non-recurring charges we set a contribution's trxn_id to the Stripe charge id. 
-    // We don't get a charge id back with create subscription, although it initiates a charge.
-    // We're changing this to the charge id using the webnhook when we insert fee_amount and 
-    // net_amount.  
      
-    $params['trxn_id'] = $subscription_id;
+    //  Don't return a $params['trxn_id'] here or else recurring membership contribs will be set 
+    //  Completed prematurely.
 
     return $params;
   }

@@ -20,13 +20,16 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
 
         if (!empty($sub_info_query)) {
           $sub_info_query->fetch();
+
+          if(!empty($sub_info_query->invoice_id)) {
           $original_invoice->end_time = $sub_info_query->end_time;
           $original_invoice->id = $sub_info_query->invoice_id;
-        }
-        else {
+          }
+          else {
           CRM_Core_Error::Fatal("Error relating this subscription id ($subscription_id) to the one in civicrm_stripe_subscriptions for customer with id ($customer_id) ");
           exit();
-        }
+	  }
+	}  
         return $original_invoice;         
     }
     // Get the data from Stripe.

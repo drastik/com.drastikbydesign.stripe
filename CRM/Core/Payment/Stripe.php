@@ -153,6 +153,15 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       $error_message .= 'Code: ' . $err['code'] . '<br />';
       $error_message .= 'Message: ' . $err['message'] . '<br />';
 
+      $newnote = civicrm_api3('Note', 'create', array(
+        'sequential' => 1,
+        'entity_id' => $params['contactID'],
+        'contact_id' => $params['contributionID'],
+        'subject' => $err['type'],
+        'note' => $err['code'],
+        'entity_table' => "civicrm_contributions",
+       ));
+
       if (isset($error_url)) {
       // Redirect to first page of form and present error.
       CRM_Core_Error::statusBounce("Oops!  Looks like there was an error.  Payment Response:

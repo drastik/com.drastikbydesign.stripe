@@ -1,0 +1,14 @@
+As of 2/12/16 there is no proper upgrade script to use this code with an existing
+installation.  You can use if you know what you're doing and are prepared to make 
+changes to your database.  Here's what you should be aware of.  Your data is in 
+bad shape if you have subscriptions. The fees are missing from any subscription 
+related contribution. Your live Stripe customers _might_ be marked as test in
+civicrm_stripe_customers. (Since email is a unique key, it's either or. Test
+customers can't make live transactions.) You should remove any subscription id
+in the trxn_id field of civicrm_contribution and put that value in the respective
+field in the new subcsription_id column of civicrm_stripe_subscriptions. For
+record keeping you can also put it in the trxn_id of civicrm_contribution_recur.
+In civicrm_contribution where you removed a subscription id, replace that with
+the charge id related to the first invoice related to that subscription. For each 
+contribution using Stripe that is missing a fee_amount and net_amount, insert them.
+

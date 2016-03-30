@@ -15,7 +15,11 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
       CRM_Core_Error::Fatal("Stripe Callback: cannot json_decode data, exiting. <br /> $data");
     }
 
-    $test_mode = ! $data->livemode;
+    if ($data->livemode) {
+      $test_mode = 0;
+    } else {
+      $test_mode = 1;
+    }
 
     $stripe_key = CRM_Core_DAO::singleValueQuery("SELECT pp.user_name FROM civicrm_payment_processor pp INNER JOIN civicrm_payment_processor_type ppt on pp.payment_processor_type_id = ppt.id AND ppt.name  = 'Stripe' WHERE is_test = '$test_mode'");
 

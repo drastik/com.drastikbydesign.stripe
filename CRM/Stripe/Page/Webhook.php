@@ -21,7 +21,27 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
       $test_mode = 1;
     }
 
-    $stripe_key = CRM_Core_DAO::singleValueQuery("SELECT pp.user_name FROM civicrm_payment_processor pp INNER JOIN civicrm_payment_processor_type ppt on pp.payment_processor_type_id = ppt.id AND ppt.name  = 'Stripe' WHERE is_test = '$test_mode'");
+    $processorId = CRM_Utils_Request::retrieve('ppid', 'Integer');
+    try {
+      if (empty($processorId)) {
+        $stripe_key = civicrm_api3('PaymentProcessor', 'getvalue', array(
+          'return' => 'user_name',
+          'payment_processor_type_id' => 'Stripe',
+          'is_test' => $test_mode,
+          'is_active' => 1,
+          'options' => array('limit' => 1),
+        ));
+      }
+      else {
+        $stripe_key = civicrm_api3('PaymentProcessor', 'getvalue', array(
+          'return' => 'user_name',
+          'id' => $processorId,
+        ));
+      }
+    }
+    catch (CiviCRM_API3_Exception $e) {
+      CRM_Core_Error::fatal('Cannot find Stripe API key: ' . $e->getMessage());
+    }
 
     require_once ("packages/stripe-php/lib/Stripe.php");
     Stripe::setApiKey($stripe_key);
@@ -81,12 +101,12 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
         // Build some params.
         $stripe_customer = Stripe_Customer::retrieve($customer_id);
         $transaction_id = $charge->id;
-        
+
         //get the balance_transaction object and retrieve the Stripe fee from it
         $balance_transaction_id = $charge->balance_transaction;
         $balance_transaction = Stripe_BalanceTransaction::retrieve($balance_transaction_id);
         $fee = $balance_transaction->fee / 100;
-        
+
         //Currently (Oct 2015) contribution.repeattransaction does not
         //insert an invoice_id in the civicrm_contribution table
         //$new_invoice_id = $stripe_event_data->data->object->id;
@@ -256,7 +276,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
           }
 
         break;
-		
+
 	  //Subscription is cancelled
       case 'customer.subscription.deleted':
 

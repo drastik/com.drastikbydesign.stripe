@@ -59,7 +59,6 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
         }
         catch(Exception $e) {
           CRM_Core_Error::Fatal("Failed to retrieve Stripe charge.  Message: " . $e->getMessage());
-          exit();
         }
 
         // Find the recurring contribution in CiviCRM by mapping it from Stripe.
@@ -79,7 +78,6 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
             $end_time = $rel_info_query->end_time;
           } else {
             CRM_Core_Error::Fatal("Error relating this customer ($customer_id) to the one in civicrm_stripe_subscriptions");
-            exit();
           }
         }
 
@@ -95,7 +93,6 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
 
         if(!$recurring_contribution['id']) {
           CRM_Core_Error::Fatal("ERROR: Stripe triggered a Webhook on an invoice not found in civicrm_contribution_recur: " . $stripe_event_data);
-          exit();
         }
 
         // Build some params.
@@ -129,7 +126,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
               'fee_amount' => $fee
           ));
 
-          return;
+          CRM_Utils_System::civiExit();
         }
 
         //Get the original contribution with this invoice_id
@@ -168,7 +165,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
               SET end_date = %1, contribution_status_id = '1'
               WHERE invoice_id = %2", $query_params);
 
-            return;
+            CRM_Utils_System::civiExit();
           }
 
           // Successful charge & more to come
@@ -182,7 +179,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
                 'contribution_status_id' => "In Progress"
             ));
 
-            return;
+            CRM_Utils_System::civiExit();
           }
 
         break;
@@ -195,7 +192,6 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
         }
         catch(Exception $e) {
           CRM_Core_Error::Fatal("Failed to retrieve Stripe charge.  Message: " . $e->getMessage());
-          exit();
         }
 
         // Find the recurring contribution in CiviCRM by mapping it from Stripe.
@@ -207,7 +203,6 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
           WHERE customer_id = %1", $query_params);
         if (empty($invoice_id)) {
           CRM_Core_Error::Fatal("Error relating this customer ({$customer_id}) to the one in civicrm_stripe_subscriptions");
-          exit();
         }
 
         // Fetch Civi's info about this recurring object.
@@ -222,7 +217,6 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
         }
         else {
           CRM_Core_Error::Fatal("ERROR: Stripe triggered a Webhook on an invoice not found in civicrm_contribution_recur: " . $stripe_event_data);
-          exit();
         }
         // Build some params.
         $recieve_date = date("Y-m-d H:i:s", $charge->created);
@@ -269,7 +263,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
               SET contribution_status_id = 4
               WHERE invoice_id = %1", $query_params);
 
-            return;
+            CRM_Utils_System::civiExit();
           }
           else {
             // This has failed more than once.  Now what?
@@ -296,7 +290,6 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
             $invoice_id = $rel_info_query->invoice_id;
           } else {
             CRM_Core_Error::Fatal("Error relating this customer ($customer_id) to the one in civicrm_stripe_subscriptions");
-            exit();
           }
         }
 
@@ -310,7 +303,6 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
         if (!$recur_contribution['id']) {
           CRM_Core_Error::Fatal("ERROR: Stripe triggered a Webhook on an invoice not found in civicrm_contribution_recur: "
               . $stripe_event_data);
-          exit();
         }
 
         //Cancel the recurring contribution
@@ -331,7 +323,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
       // One-time donation and per invoice payment.
       case 'charge.succeeded':
         // Not implemented.
-        return;
+        CRM_Utils_System::civiExit();
         break;
 
     }

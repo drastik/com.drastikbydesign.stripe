@@ -6,11 +6,13 @@
  */
 abstract class StripeTestCase extends UnitTestCase
 {
+  const API_KEY = "tGN0bIwXnHdwOa85VABjPdSn8nWY7G7I";
+
   protected static function authorizeFromEnv()
   {
     $apiKey = getenv('STRIPE_API_KEY');
     if (!$apiKey) {
-      $apiKey = "tGN0bIwXnHdwOa85VABjPdSn8nWY7G7I";
+      $apiKey = self::API_KEY;
     }
     Stripe::setApiKey($apiKey);
   }
@@ -72,7 +74,7 @@ abstract class StripeTestCase extends UnitTestCase
             'routing_number' => '110000000',
             'account_number'  => '000123456789'
           ),
-      )
+        )
     );
   }
 
@@ -132,5 +134,32 @@ abstract class StripeTestCase extends UnitTestCase
           )
       );
     }
+  }
+
+  /**
+   * Genereate a semi-random string
+   */
+  public function generateRandomString($length = 24)
+  {
+    $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTU';
+    $charactersLength = strlen($characters);
+    $randomString = '';
+    for ($i = 0; $i < $length; $i++) {
+        $randomString .= $characters[rand(0, $charactersLength - 1)];
+    }
+    return $randomString;
+  }
+
+  protected static function createTestBitcoinReceiver($email)
+  {
+    $receiver = Stripe_BitcoinReceiver::create(
+        array(
+          'amount' => 100,
+          'currency' => 'usd',
+          'description' => 'some details',
+          'email' => $email
+        )
+    );
+    return $receiver;
   }
 }

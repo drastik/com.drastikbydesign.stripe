@@ -153,8 +153,8 @@
 
       // Handle multiple payment options and Stripe not being chosen.
       if ($form.find(".crm-section.payment_processor-section").length > 0) {
-        if ($form.find('input[name="payment_processor"]:checked').length) {
-          processorId=$form.find('input[name="payment_processor"]:checked').val();
+        if ($form.find('input[name="payment_processor_id"]:checked').length) {
+          processorId=$form.find('input[name="payment_processor_id"]:checked').val();
           if (!($form.find('input[name="stripe_token"]').length) || ($('#stripe-id').length && $('#stripe-id').val() != processorId)) {
             return true;
           }
@@ -166,7 +166,7 @@
       }
 
       // Handle pay later (option value '0' in payment_processor radio group).
-      if ($form.find('input[name="payment_processor"]:checked').length && !parseInt($form.find('input[name="payment_processor"]:checked').val())) {
+      if ($form.find('input[name="payment_processor_id"]:checked').length && !parseInt($form.find('input[name="payment_processor_id"]:checked').val())) {
         return true;
       }
 

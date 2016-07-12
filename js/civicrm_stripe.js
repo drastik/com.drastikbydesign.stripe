@@ -177,6 +177,12 @@
         return true;
       }
 
+      // If there's no credit card field, no use in continuing (probably wrong
+      // context anyway)
+      if (!$form.find('#credit_card_number').length) {
+        return true;
+      }
+
       event.preventDefault();
       event.stopPropagation();
 

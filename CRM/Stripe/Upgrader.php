@@ -51,4 +51,28 @@ class CRM_Stripe_Upgrader extends CRM_Stripe_Upgrader_Base {
     }
     return TRUE;
   }
+  
+  /**
+   * Add ppid (Payment Processor ID) column to civicrm_stripe_customers tables
+   *   to support multiple stripe instances.
+   *
+   * @return TRUE on success
+   * @throws Exception
+   */
+  public function upgrade_1_9_004() {
+    // Add ppid column to civicrm_stripe_customers tables.
+    $ppid_column_check = mysql_query("SHOW COLUMNS FROM `civicrm_stripe_customers` LIKE 'ppid'");
+    $ppid_column_exists = (mysql_num_rows($ppid_column_check)) ? TRUE : FALSE;
+    if (!$ppid_column_exists) {
+      $this->ctx->log->info('Applying civicrm_stripe update 1904.  Adding ppid (Payment Processor ID) to civicrm_stripe_customers tables.');
+      CRM_Core_DAO::executeQuery('ALTER TABLE civicrm_stripe_customers ADD COLUMN `ppid` 
+      smallint(4) UNSIGNED NOT NULL COMMENT "Payment Processor ID"');
+    }
+    else {
+      $this->ctx->log->info('Skipped civicrm_stripe update 1904.  Column ppid already present on civicrm_stripe_customers table.');
+    }
+
+    return TRUE;
+  }
+
 }

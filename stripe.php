@@ -41,6 +41,7 @@ function stripe_civicrm_install() {
   CREATE TABLE IF NOT EXISTS `civicrm_stripe_plans` (
     `plan_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
     `is_live` tinyint(4) NOT NULL COMMENT 'Whether this is a live or test transaction',
+    `processor_id` int(10) DEFAULT NULL COMMENT 'ID from civicrm_payment_processor',
     UNIQUE KEY `plan_id` (`plan_id`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
   ");

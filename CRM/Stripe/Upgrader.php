@@ -61,11 +61,12 @@ class CRM_Stripe_Upgrader extends CRM_Stripe_Upgrader_Base {
   public function upgrade_4_6_01() {
     $procIdCheck = mysql_query("SHOW COLUMNS FROM `civicrm_stripe_customers` LIKE 'processor_id'");
     if (mysql_num_rows($procIdCheck)) {
-      $this->ctx->log->info('Skipped civicrm_stripe update 4601.  Column processor_id already present on civicrm_stripe_customers table.');
+      $this->ctx->log->info('Skipped civicrm_stripe update 4601.  Column processor_id already present on civicrm_stripe_customers and civicrm_stripe_plans table.');
     }
     else {
-      $this->ctx->log->info('Applying civicrm_stripe update 4601.  Adding processor_id to civicrm_stripe_customers table.');
+      $this->ctx->log->info('Applying civicrm_stripe update 4601.  Adding processor_id to civicrm_stripe_customers and civicrm_stripe_plans table.');
       CRM_Core_DAO::executeQuery('ALTER TABLE civicrm_stripe_customers ADD COLUMN `processor_id` int(10) DEFAULT NULL COMMENT "ID from civicrm_payment_processor"');
+      CRM_Core_DAO::executeQuery('ALTER TABLE civicrm_stripe_plans ADD COLUMN `processor_id` int(10) DEFAULT NULL COMMENT "ID from civicrm_payment_processor"');
     }
     return TRUE;
   }

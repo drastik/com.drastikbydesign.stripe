@@ -310,11 +310,12 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     // Prepare escaped query params.
     $query_params = array(
       1 => array($email, 'String'),
+      2 => array($this->_paymentProcessor['id'], 'Integer'),
     );
 
     $customer_query = CRM_Core_DAO::singleValueQuery("SELECT id
       FROM civicrm_stripe_customers
-      WHERE email = %1 AND is_live = '{$this->_islive}'", $query_params);
+      WHERE email = %1 AND is_live = '{$this->_islive}' AND processor_id = %2", $query_params);
 
     /****
      * If for some reason you cannot use Stripe.js and you are aware of PCI Compliance issues,
@@ -368,10 +369,11 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
         $query_params = array(
           1 => array($email, 'String'),
           2 => array($stripe_customer->id, 'String'),
+          3 => array($this->_paymentProcessor['id'], 'Integer'),
         );
 
         CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_customers
-          (email, id, is_live) VALUES (%1, %2, '{$this->_islive}')", $query_params);
+          (email, id, is_live, processor_id) VALUES (%1, %2, '{$this->_islive}', %3)", $query_params);
       }
       else {
         CRM_Core_Error::fatal(ts('There was an error saving new customer within Stripe.  Is Stripe down?'));
@@ -421,17 +423,19 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
           // Delete whatever we have for this customer.
           $query_params = array(
             1 => array($email, 'String'),
+            2 => array($this->_paymentProcessor['id'], 'Integer'),
           );
           CRM_Core_DAO::executeQuery("DELETE FROM civicrm_stripe_customers
-            WHERE email = %1 AND is_live = '{$this->_islive}'", $query_params);
+            WHERE email = %1 AND is_live = '{$this->_islive}' AND processor_id = %2", $query_params);
 
           // Create new record for this customer.
           $query_params = array(
             1 => array($email, 'String'),
             2 => array($stripe_customer->id, 'String'),
+            3 => array($this->_paymentProcessor['id'], 'Integer'),
           );
-          CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_customers (email, id, is_live)
-            VALUES (%1, %2, '{$this->_islive}')", $query_params);
+          CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_customers (email, id, is_live, processor_id)
+            VALUES (%1, %2, '{$this->_islive}, %3')", $query_params);
         }
         else {
           // Customer was found in civicrm_stripe database, but unable to be
@@ -576,7 +580,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     // subscription first.
     $subscriptions = $stripe_customer->offsetGet('subscriptions');
     $data = $subscriptions->offsetGet('data');
-    
+
     if(!empty($data)) {
       $status = $data[0]->offsetGet('status');
 

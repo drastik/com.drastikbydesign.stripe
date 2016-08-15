@@ -600,11 +600,12 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     // Prepare escaped query params.
     $query_params = array(
       1 => array($stripe_customer->id, 'String'),
+      2 => array($this->_paymentProcessor['id'], 'Integer'),
     );
 
     $existing_subscription_query = CRM_Core_DAO::singleValueQuery("SELECT invoice_id
       FROM civicrm_stripe_subscriptions
-      WHERE customer_id = %1 AND is_live = '{$this->_islive}'", $query_params);
+      WHERE customer_id = %1 AND is_live = '{$this->_islive}', and processor_id = %2", $query_params);
 
     if (!empty($existing_subscription_query)) {
       // Cancel existing Recurring Contribution in CiviCRM.
@@ -613,6 +614,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       // Prepare escaped query params.
       $query_params = array(
         1 => array($existing_subscription_query, 'String'),
+        2 => array($this->_paymentProcessor['id'], 'Integer'),
       );
 
       CRM_Core_DAO::executeQuery("UPDATE civicrm_contribution_recur
@@ -632,21 +634,22 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     $query_params = array(
       1 => array($stripe_customer->id, 'String'),
       2 => array($invoice_id, 'String'),
+      2 => array($this->_paymentProcessor['id'], 'Integer'),
     );
 
     // Insert the new Stripe Subscription info.
     // Set end_time to NULL if installments are ongoing indefinitely
     if (empty($installments)) {
       CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_subscriptions
-        (customer_id, invoice_id, is_live)
-        VALUES (%1, %2, '{$this->_islive}')", $query_params);
+        (customer_id, invoice_id, is_live, processor_id)
+        VALUES (%1, %2, '{$this->_islive}', %3)", $query_params);
     }
     else {
       // Add the end time to the query params.
       $query_params[3] = array($end_time, 'Integer');
       CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_subscriptions
-        (customer_id, invoice_id, end_time, is_live)
-        VALUES (%1, %2, %3, '{$this->_islive}')", $query_params);
+        (customer_id, invoice_id, end_time, is_live, processor_id)
+        VALUES (%1, %2, %3, '{$this->_islive}', %3)", $query_params);
     }
 
     return $params;

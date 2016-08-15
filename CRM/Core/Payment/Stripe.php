@@ -535,11 +535,12 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     // Prepare escaped query params.
     $query_params = array(
       1 => array($plan_id, 'String'),
+      2 => array($this->_paymentProcessor['id'], 'Integer'),
     );
 
     $stripe_plan_query = CRM_Core_DAO::singleValueQuery("SELECT plan_id
       FROM civicrm_stripe_plans
-      WHERE plan_id = %1 AND is_live = '{$this->_islive}'", $query_params);
+      WHERE plan_id = %1 AND is_live = '{$this->_islive}' AND processor_id = %2", $query_params);
 
     if (!isset($stripe_plan_query)) {
       $formatted_amount = '$' . number_format(($amount / 100), 2);
@@ -564,9 +565,10 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       // Prepare escaped query params.
       $query_params = array(
         1 => array($plan_id, 'String'),
+        2 => array($this->_paymentProcessor['id'], 'Integer'),
       );
-      CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_plans (plan_id, is_live)
-        VALUES (%1, '{$this->_islive}')", $query_params);
+      CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_plans (plan_id, is_live, processor_id)
+        VALUES (%1, '{$this->_islive}', %2)", $query_params);
     }
 
     // If a contact/customer has an existing active recurring

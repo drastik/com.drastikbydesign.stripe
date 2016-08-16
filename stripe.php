@@ -32,6 +32,7 @@ function stripe_civicrm_install() {
     `email` varchar(64) COLLATE utf8_unicode_ci DEFAULT NULL,
     `id` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
     `is_live` tinyint(4) NOT NULL COMMENT 'Whether this is a live or test transaction',
+    `processor_id` int(10) DEFAULT NULL COMMENT 'ID from civicrm_payment_processor',
     UNIQUE KEY `id` (`id`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
   ");
@@ -40,6 +41,7 @@ function stripe_civicrm_install() {
   CREATE TABLE IF NOT EXISTS `civicrm_stripe_plans` (
     `plan_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
     `is_live` tinyint(4) NOT NULL COMMENT 'Whether this is a live or test transaction',
+    `processor_id` int(10) DEFAULT NULL COMMENT 'ID from civicrm_payment_processor',
     UNIQUE KEY `plan_id` (`plan_id`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
   ");
@@ -50,6 +52,7 @@ function stripe_civicrm_install() {
     `invoice_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
     `end_time` int(11) NOT NULL DEFAULT '0',
     `is_live` tinyint(4) NOT NULL COMMENT 'Whether this is a live or test transaction',
+    `processor_id` int(10) DEFAULT NULL COMMENT 'ID from civicrm_payment_processor',
     KEY `end_time` (`end_time`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
   ");

@@ -605,7 +605,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
 
     $existing_subscription_query = CRM_Core_DAO::singleValueQuery("SELECT invoice_id
       FROM civicrm_stripe_subscriptions
-      WHERE customer_id = %1 AND is_live = '{$this->_islive}', and processor_id = %2", $query_params);
+      WHERE customer_id = %1 AND is_live = '{$this->_islive}' AND processor_id = %2", $query_params);
 
     if (!empty($existing_subscription_query)) {
       // Cancel existing Recurring Contribution in CiviCRM.

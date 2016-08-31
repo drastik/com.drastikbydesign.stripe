@@ -62,7 +62,11 @@
 
       // If CiviDiscount button or field is submitted, flag the form.
       $form.data('cividiscount-dont-handle', '0');
-      $form.find('input[type="submit"][formnovalidate="1"]').click( function() {
+      // This is an ugly hack. Really, the code should positively identify the
+      // "real" submit button(s) and only respond to them.  Otherwise, we're
+      // chasing down a potentially endless number of exceptions.  The problem
+      // is that it's unclear if CiviCRM consistently names its submit buttons.
+      $form.find('input[type="submit"][formnovalidate="1"], input[type="submit"].cancel').click( function() {
         $form.data('cividiscount-dont-handle', 1);
       });
       $form.find('input#discountcode').keypress( function(e) {

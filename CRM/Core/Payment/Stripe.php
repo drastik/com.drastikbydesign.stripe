@@ -543,12 +543,12 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       WHERE plan_id = %1 AND is_live = '{$this->_islive}' AND processor_id = %2", $query_params);
 
     if (!isset($stripe_plan_query)) {
-      $formatted_amount = '$' . number_format(($amount / 100), 2);
+      $formatted_amount = number_format(($amount / 100), 2);
       // Create a new Plan.
       $stripe_plan = array(
         'amount' => $amount,
         'interval' => $frequency,
-        'name' => "CiviCRM every {$frequency_interval} {$frequency}s {$formatted_amount}",
+        'name' => "CiviCRM every {$frequency_interval} {$frequency}(s) {$formatted_amount}{$currency}",
         'currency' => $currency,
         'id' => $plan_id,
         'interval_count' => $frequency_interval,

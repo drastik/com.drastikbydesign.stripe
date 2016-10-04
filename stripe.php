@@ -170,7 +170,7 @@ function stripe_civicrm_buildForm($formName, &$form) {
     $form->setAttribute('class', $form->getAttribute('class') . ' stripe-payment-form');
     $form->addElement('hidden', 'stripe_token', $stripe_token, array('id' => 'stripe-token'));
   }
-  stripe_add_stripe_js($stripe_key, $form);
+  $form->addElement('hidden', 'stripe_pub_key', $stripe_key, array('id' => 'stripe-pub-key'));
 
   // Add email field as it would usually be found on donation forms.
   if (!isset($form->_elementIndex['email']) && !empty($form->userEmail)) {
@@ -236,13 +236,6 @@ function stripe_get_key_for_name($name, $is_test) {
   }
 }
 
-/**
- * Add publishable key and event bindings for Stripe.js.
- */
-function stripe_add_stripe_js($stripe_key, $form) {
-  $form->addElement('hidden', 'stripe_pub_key', $stripe_key, array('id' => 'stripe-pub-key'));
-  CRM_Core_Resources::singleton()->addScriptFile('com.drastikbydesign.stripe', 'js/civicrm_stripe.js', 0);
-}
 
 /**
  * Implementation of hook_civicrm_managed().
@@ -274,4 +267,20 @@ function stripe_civicrm_managed(&$entities) {
   );
 
   return _stripe_civix_civicrm_managed($entities);
+}
+
+/**
+ * Implementation of hook_civicrm_alterContent
+ *
+ * @return void
+ */
+function stripe_civicrm_alterContent( &$content, $context, $tplName, &$object ) {
+  if($context == 'form') {
+    $stripe_key = stripe_get_key($object);
+    if(empty($stripe_key)) {
+      return;
+    }
+    $stripeJSURL = CRM_Core_Resources::singleton()->getUrl('com.drastikbydesign.stripe', 'js/civicrm_stripe.js');
+    $content .= "<script src='{$stripeJSURL}'></script>";
+  }
 }

@@ -133,12 +133,21 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
             exit();
         }
 
-        // Repeat the original contrib. api contribution.repeattransaction updates the membership record. :-)
+	// Get fee from Stripe.
+	 $balance_transaction = Stripe_BalanceTransaction::retrieve($balance_transaction_id);
+	 $fee = $balance_transaction->fee / 100;
 
+	 // Repeat the original contribution ito update a membership.  api contribution repeattransaction 
+	 // is how that is done. However, we add the amount and fee regardless of the original contribution
+	 // because we may have upgraded or downgraded the membership, or recurring contribution level.
+	 $amount = $charge->amount / 100;
+	 
         $result = civicrm_api3('Contribution', 'repeattransaction', array(
             'original_contribution_id' => $orig_contrib_id,
             'contribution_status_id' => "Completed",
             'trxn_id' => $charge_id,
+	    'total_amount' => $amount,
+	    'fee_amount' => $fee,
 	    //'invoice_id' => $new_invoice_id - contribution.repeattransaction doesn't support it currently
 	    'is_email_receipt' => 1,
          ));  
@@ -287,6 +296,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
         // Not implemented.
         return;
         break;
+
 
     }
     parent::run();

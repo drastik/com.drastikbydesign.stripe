@@ -298,6 +298,36 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
         break;
 
 
+	//  Subscription is updated. For now, update the existing recurring contribution. 
+	//  TODO: Consider deleting the old and creating a new one.  However this has  
+	//  the potential to break membership renewal hwen new payments come in.    
+       case 'customer.subscription.updated':
+	   $subscription_id = $stripe_event_data->data->object->id;
+	   $new_amount = $stripe_event_data->data->object->plan->amount / 100;
+	   $new_frequency_interval = $stripe_event_data->data->object->plan->interval_count;
+	   $new_frequency_unit = $stripe_event_data->data->object->plan->interval;
+
+	// Find the recurring contrib, and modify it.
+	   $recurring_contribution = civicrm_api3('ContributionRecur', 'get', array(
+            'sequential' => 1,
+            'return' => "id",
+            'trxn_id' => $subscription_id
+           ));
+
+	    $result = civicrm_api3('ContributionRecur', 'create', array(
+            'id' => $recurring_contribution['id'],
+            'sequential' => 1,
+	    'amount' => $new_amount,
+	    'frequency_unit' => $new_frequency_unit,
+	    'frequency_interval' => $new_frequency_interval,
+            'contribution_status_id' => "In Progress"
+             ));
+	   
+
+	  return;
+	  break;
+ 
+	
     }
     parent::run();
   }

@@ -535,7 +535,21 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     $installments = $params['installments'];
     $frequency_interval = (empty($params['frequency_interval']) ? 1 : $params['frequency_interval']);
     $currency = strtolower($params['currencyID']);
-    $plan_id = "every-{$frequency_interval}-{$frequency}-{$amount}-{$currency}";
+
+    // Currently plan_id is a unique db key. Therefore test plans of the
+    // same name as a live plan fail to be added with a DB error Already exists,
+    // which is a problem for testing.  This appends 'test' to a test
+    // plan to avoid that error.
+    $is_live = $this->_islive;
+    if ( $is_live == 0 ) {
+            $mode_tag = "-test";
+    }
+    $plan_id = "every-{$frequency_interval}-{$frequency}-{$amount}-{$currency}{$mode_tag}";
+
+    // Prepare escaped query params.
+    $query_params = array(
+      1 => array($plan_id, 'String'),
+    );
 
     // Prepare escaped query params.
     $query_params = array(
@@ -552,7 +566,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       $stripe_plan = array(
         'amount' => $amount,
         'interval' => $frequency,
-        'name' => "CiviCRM every {$frequency_interval} {$frequency}s {$formatted_amount}",
+        'name' => "CiviCRM every {$frequency_interval} {$frequency}s {$formatted_amount}{$mode_tag}",      
         'currency' => $currency,
         'id' => $plan_id,
         'interval_count' => $frequency_interval,

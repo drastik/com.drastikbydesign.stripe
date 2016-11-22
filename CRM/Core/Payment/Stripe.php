@@ -536,6 +536,57 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     $frequency_interval = (empty($params['frequency_interval']) ? 1 : $params['frequency_interval']);
     $currency = strtolower($params['currencyID']);
 
+    // This adds support for CiviDiscount on recurring contributions. The Stripe procedure for discounting the
+    // first payment of subscription entails creating a negative invoice item or negative balance first,
+    // then creating the subscription at 100% full price. The customers first Stripe invoice will reflect the
+    // disount. Subsequent invoices will be at the full undiscounted amount.
+    // If the discount is > the cost of initial payment, we still send the whole discount
+    // as a negative balance, but (TODO) we could decide to stash it back into the discount code to give users an
+    // opportuniy to apply a discount on another non-memberhsip related item.
+
+    if (isset($params['discountcode'])) {
+      $discount_code = $params['discountcode'];
+      $discount_object = civicrm_api3('DiscountCode', 'get', array(
+         'sequential' => 1,
+         'return' => "amount,amount_type",
+         'code' => $discount_code,
+          ));
+       // amount_types: 1 = percentage, 2 = fixed
+       if ((isset($discount_object['values'][0]['amount'])) && (isset($discount_object['values'][0]['amount_type']))) {
+         $discount_type = $discount_object['values'][0]['amount_type'];
+         if ( $discount_type == 1 ) {
+            // Discount is a percentage. Avoid ugly math and just get the full price using priceSetId.
+            if (isset($params['priceSetId'])) {
+              $priceFieldValue = civicrm_api3('PriceFieldValue', 'get', array(
+                'sequential' => 1,
+                'return' => "amount",
+                'price_field_id' => $params['priceSetId'],
+              ));
+             }
+            if (isset($priceFieldValue['values'][0]['amount'])) {
+              $priceset_amount = $priceFieldValue['values'][0]['amount'];
+              $full_price = $priceset_amount * 100;
+              $discount_in_cents = $full_price - $amount;
+              // Set amount to full price.
+              $amount = $full_price;
+             }
+         } else {
+          // discount is fixed. (may be > amount)
+           $discount_amount = $discount_object['values'][0]['amount'];
+           $discount_in_cents = $discount_amount * 100;
+           // Set amount to full price.
+           $amount =  $amount + $discount_in_cents;
+          }
+        }
+        // Consider adding this to show recurring amount after payment
+        // but it would be friendlier if
+        //  $params['amount'] = number_format(($amount / 100), 2);
+
+        // Apply the disount through a negative balance.
+       $stripe_customer->account_balance = -$discount_in_cents;
+       $stripe_customer->save();
+     }
+
     // Currently plan_id is a unique db key. Therefore test plans of the
     // same name as a live plan fail to be added with a DB error Already exists,
     // which is a problem for testing.  This appends 'test' to a test

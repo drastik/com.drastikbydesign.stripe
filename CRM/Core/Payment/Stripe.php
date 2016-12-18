@@ -352,11 +352,11 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     */
 
     // drastik - Uncomment this for Drupal debugging to dblog.
-    /*
+   /* 
      $zz = print_r(get_defined_vars(), TRUE);
      $debug_code = '<pre>' . $zz . '</pre>';
      watchdog('Stripe', $debug_code);
-    */
+   */
 
     // Customer not in civicrm_stripe database.  Create a new Customer in Stripe.
     if (!isset($customer_query)) {
@@ -551,16 +551,23 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
          'return' => "amount,amount_type",
          'code' => $discount_code,
           ));
-       // amount_types: 1 = percentage, 2 = fixed
+       // amount_types: 1 = percentage, 2 = fixed, 3 = giftcard
        if ((isset($discount_object['values'][0]['amount'])) && (isset($discount_object['values'][0]['amount_type']))) {
          $discount_type = $discount_object['values'][0]['amount_type'];
          if ( $discount_type == 1 ) {
-            // Discount is a percentage. Avoid ugly math and just get the full price using priceSetId.
-            if (isset($params['priceSetId'])) {
+            // Discount is a percentage. Avoid ugly math and just get the full price using price_ param.
+           foreach($params as $key=>$value){
+              if("price_" == substr($key,0,6)){
+                $price_param = $key;
+                $price_field_id = substr($key,strrpos($key,'_') + 1);
+              }
+            }
+           if (isset($params[$price_param])) {
               $priceFieldValue = civicrm_api3('PriceFieldValue', 'get', array(
-                'sequential' => 1,
-                'return' => "amount",
-                'price_field_id' => $params['priceSetId'],
+               'sequential' => 1,
+               'return' => "amount",
+               'id' => $params[$price_param],
+               'price_field_id' => $price_field_id,
               ));
              }
             if (isset($priceFieldValue['values'][0]['amount'])) {
@@ -570,8 +577,8 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
               // Set amount to full price.
               $amount = $full_price;
              }
-         } else {
-          // discount is fixed. (may be > amount)
+         } else if ( $discount_type >= 2 ){
+          // discount is fixed or giftcard. (may be > amount)
            $discount_amount = $discount_object['values'][0]['amount'];
            $discount_in_cents = $discount_amount * 100;
            // Set amount to full price.
@@ -735,3 +742,4 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     CRM_Core_Error::fatal(ts('Use direct billing instead of Transfer method.'));
   }
 }
+

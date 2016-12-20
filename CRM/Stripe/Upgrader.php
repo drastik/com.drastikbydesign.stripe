@@ -27,9 +27,13 @@ class CRM_Stripe_Upgrader extends CRM_Stripe_Upgrader_Base {
    * @throws Exception
    */
   public function upgrade_1_9_003() {
+    $config = CRM_Core_Config::singleton();
+    $dbName = DB::connect($config->dsn)->_db;
+
     // Add is_live column to civicrm_stripe_plans and civicrm_stripe_customers tables.
-    $live_column_check = mysql_query("SHOW COLUMNS FROM `civicrm_stripe_customers` LIKE 'is_live'");
-    $live_column_exists = (mysql_num_rows($live_column_check)) ? TRUE : FALSE;
+    $sql = "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = %1 AND TABLE_NAME = 'civicrm_stripe_customers' AND COLUMN_NAME = 'is_live'";
+    $dao = CRM_Core_DAO::executeQuery($sql, array(1 => array($dbName, 'String')));
+    $live_column_exists = $dao->N == 0 ? FALSE : TRUE;
     if (!$live_column_exists) {
       $this->ctx->log->info('Applying civicrm_stripe update 1903.  Adding is_live to civicrm_stripe_plans and civicrm_stripe_customers tables.');
       CRM_Core_DAO::executeQuery('ALTER TABLE civicrm_stripe_customers ADD COLUMN `is_live` tinyint(4) NOT NULL COMMENT "Whether this is a live or test transaction"');
@@ -39,8 +43,9 @@ class CRM_Stripe_Upgrader extends CRM_Stripe_Upgrader_Base {
       $this->ctx->log->info('Skipped civicrm_stripe update 1903.  Column is_live already present on civicrm_stripe_plans table.');
     }
 
-    $key_column_check = mysql_query("SHOW INDEX FROM `civicrm_stripe_customers` WHERE Key_name = 'email'");
-    $key_column_exists = (mysql_num_rows($key_column_check)) ? TRUE : FALSE;
+    $sql = "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = %1 AND TABLE_NAME = 'civicrm_stripe_customers' AND COLUMN_KEY = 'MUL'";
+    $dao = CRM_Core_DAO::executeQuery($sql, array(1 => array($dbName, 'String')));
+    $key_column_exists = $dao->N == 0 ? FALSE : TRUE;
     if ($key_column_exists) {
       $this->ctx->log->info('Applying civicrm_stripe update 1903.  Setting unique key from email to id on civicrm_stripe_plans table.');
       CRM_Core_DAO::executeQuery('ALTER TABLE `civicrm_stripe_customers` DROP INDEX email');
@@ -59,8 +64,13 @@ class CRM_Stripe_Upgrader extends CRM_Stripe_Upgrader_Base {
    * @throws Exception
    */
   public function upgrade_4_6_01() {
-    $procIdCheck = mysql_query("SHOW COLUMNS FROM `civicrm_stripe_customers` LIKE 'processor_id'");
-    if (mysql_num_rows($procIdCheck)) {
+    $config = CRM_Core_Config::singleton();
+    $dbName = DB::connect($config->dsn)->_db;
+
+    $sql = "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = %1 AND TABLE_NAME = 'civicrm_stripe_customers' AND COLUMN_NAME = 'processor_id'";
+    $dao = CRM_Core_DAO::executeQuery($sql, array(1 => array($dbName, 'String')));
+
+    if ($dao->N) {
       $this->ctx->log->info('Skipped civicrm_stripe update 4601.  Column processor_id already present on civicrm_stripe_customers and civicrm_stripe_plans table.');
     }
     else {

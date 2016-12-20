@@ -105,6 +105,8 @@ class CRM_Stripe_Upgrader extends CRM_Stripe_Upgrader_Base {
         }
       }
       catch (CiviCRM_API3_Exception $e) {
+        $msg = 'Exception thrown in ' . __METHOD__ . '. Problem setting the processor id for existing customers, plans and subscriptions.';
+        CRM_Core_Error::debug_log_message($msg, TRUE, 'com.drastikbydesign.stripe');
         return TRUE;
       }
     }

@@ -68,6 +68,7 @@ class CRM_Stripe_Upgrader extends CRM_Stripe_Upgrader_Base {
       CRM_Core_DAO::executeQuery('ALTER TABLE civicrm_stripe_customers ADD COLUMN `processor_id` int(10) DEFAULT NULL COMMENT "ID from civicrm_payment_processor"');
       CRM_Core_DAO::executeQuery('ALTER TABLE civicrm_stripe_plans ADD COLUMN `processor_id` int(10) DEFAULT NULL COMMENT "ID from civicrm_payment_processor"');
       CRM_Core_DAO::executeQuery('ALTER TABLE civicrm_stripe_subscriptions ADD COLUMN `processor_id` int(10) DEFAULT NULL COMMENT "ID from civicrm_payment_processor"');
+      CRM_Core_DAO::executeQuery('ALTER TABLE civicrm_stripe_plans DROP KEY `plan_id`, ADD KEY `plan_id` (`plan_id`,`is_live`,`processor_id`)');
       try {
         $params = array(
           'name' => "Stripe",

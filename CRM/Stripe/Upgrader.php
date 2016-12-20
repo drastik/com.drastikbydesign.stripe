@@ -69,20 +69,39 @@ class CRM_Stripe_Upgrader extends CRM_Stripe_Upgrader_Base {
       CRM_Core_DAO::executeQuery('ALTER TABLE civicrm_stripe_plans ADD COLUMN `processor_id` int(10) DEFAULT NULL COMMENT "ID from civicrm_payment_processor"');
       CRM_Core_DAO::executeQuery('ALTER TABLE civicrm_stripe_subscriptions ADD COLUMN `processor_id` int(10) DEFAULT NULL COMMENT "ID from civicrm_payment_processor"');
       try {
-        // Set processor ID if there's only one.
-        $processorCount = civicrm_api3('PaymentProcessorType', 'get', array(
+        $params = array(
           'name' => "Stripe",
-          'api.PaymentProcessor.getcount' => array('is_test' => 0),
-        ));
-        foreach ($processorCount['values'] as $processorType) {
-          if (!empty($processorType['api.PaymentProcessor.get']['id'])) {
-            $p = array(
-              1 => array($processorType['api.PaymentProcessor.get']['id'], 'Integer'),
-            );
-            CRM_Core_DAO::executeQuery('UPDATE civicrm_stripe_customers SET processor_id = %1 where processor_id IS NULL', $p);
-            CRM_Core_DAO::executeQuery('UPDATE civicrm_stripe_plans SET processor_id = %1 where processor_id IS NULL', $p);
-            CRM_Core_DAO::executeQuery('UPDATE civicrm_stripe_subscriptions SET processor_id = %1 where processor_id IS NULL', $p);
+          'is_active' => 1,
+          'api.PaymentProcessor.get' => array(),
+        );
+        $processorType = civicrm_api3('PaymentProcessorType', 'get', $params); 
+        $test_pp_id = NULL;
+        $live_pp_id = NULL;
+        // We should only get one response - just one stripe pp type that is active.
+
+        // Pop off the values and get possibly one or two actual setup payment
+        // processors.
+        $processors = array_pop($processorType['values']);
+       
+        foreach ($processors['api.PaymentProcessor.get']['values'] as $processor) {
+          if ($processor['is_test'] == 1 && $processor['is_active'] == 1) {
+            $test_id = $processor['id'];
           }
+          elseif ($processor['is_test'] == 0 && $processor['is_active'] == 1) {
+            $live_id = $processor['id'];
+          }
+        }
+        if($test_id) {
+          $params = array(1 => array($test_id, 'Integer'));
+          CRM_Core_DAO::executeQuery('UPDATE civicrm_stripe_customers SET processor_id = %1 where processor_id IS NULL AND is_live = 0', $params);
+          CRM_Core_DAO::executeQuery('UPDATE civicrm_stripe_plans SET processor_id = %1 where processor_id IS NULL AND is_live = 0', $params);
+          CRM_Core_DAO::executeQuery('UPDATE civicrm_stripe_subscriptions SET processor_id = %1 where processor_id IS NULL AND is_live = 0', $params);
+        }
+        if($live_id) {
+          $params = array(1 => array($live_id, 'Integer'));
+          CRM_Core_DAO::executeQuery('UPDATE civicrm_stripe_customers SET processor_id = %1 where processor_id IS NULL AND is_live = 1', $params);
+          CRM_Core_DAO::executeQuery('UPDATE civicrm_stripe_plans SET processor_id = %1 where processor_id IS NULL AND is_live = 1', $params);
+          CRM_Core_DAO::executeQuery('UPDATE civicrm_stripe_subscriptions SET processor_id = %1 where processor_id IS NULL AND is_live = 1', $params);
         }
       }
       catch (CiviCRM_API3_Exception $e) {

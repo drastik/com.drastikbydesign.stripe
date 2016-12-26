@@ -62,7 +62,11 @@
 
       // If CiviDiscount button or field is submitted, flag the form.
       $form.data('cividiscount-dont-handle', '0');
-      $form.find('input[type="submit"][formnovalidate="1"]').click( function() {
+      // This is an ugly hack. Really, the code should positively identify the
+      // "real" submit button(s) and only respond to them.  Otherwise, we're
+      // chasing down a potentially endless number of exceptions.  The problem
+      // is that it's unclear if CiviCRM consistently names its submit buttons.
+      $form.find('input[type="submit"][formnovalidate="1"], input[type="submit"].cancel').click( function() {
         $form.data('cividiscount-dont-handle', 1);
       });
       $form.find('input#discountcode').keypress( function(e) {
@@ -144,7 +148,8 @@
         additionalParticipants = cj("#additional_participants").val();
         // The currentTotal is already being calculated in Form/Contribution/Main.tpl.
         if(typeof currentTotal !== 'undefined') {
-          if (currentTotal == 0 && !additionalParticipants) {
+          if (currentTotal == 0 && !additionalParticipants && is_recur !== true ) {
+          //if (currentTotal == 0 && !additionalParticipants ) {
             // This is also hit when "Going back", but we already have stripe_token.
             return true;
           }
@@ -153,8 +158,8 @@
 
       // Handle multiple payment options and Stripe not being chosen.
       if ($form.find(".crm-section.payment_processor-section").length > 0) {
-        if ($form.find('input[name="payment_processor"]:checked').length) {
-          processorId=$form.find('input[name="payment_processor"]:checked').val();
+        if ($form.find('input[name="payment_processor_id"]:checked').length) {
+          processorId=$form.find('input[name="payment_processor_id"]:checked').val();
           if (!($form.find('input[name="stripe_token"]').length) || ($('#stripe-id').length && $('#stripe-id').val() != processorId)) {
             return true;
           }
@@ -166,7 +171,7 @@
       }
 
       // Handle pay later (option value '0' in payment_processor radio group).
-      if ($form.find('input[name="payment_processor"]:checked').length && !parseInt($form.find('input[name="payment_processor"]:checked').val())) {
+      if ($form.find('input[name="payment_processor_id"]:checked').length && !parseInt($form.find('input[name="payment_processor_id"]:checked').val())) {
         return true;
       }
 
@@ -174,6 +179,12 @@
       if ($form.find("input#stripe-token").val()) {
         $form.find("input#credit_card_number").removeAttr('name');
         $form.find("input#cvv2").removeAttr('name');
+        return true;
+      }
+
+      // If there's no credit card field, no use in continuing (probably wrong
+      // context anyway)
+      if (!$form.find('#credit_card_number').length) {
         return true;
       }
 

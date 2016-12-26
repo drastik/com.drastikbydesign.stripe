@@ -352,11 +352,11 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     */
 
     // drastik - Uncomment this for Drupal debugging to dblog.
-   /* 
+    
      $zz = print_r(get_defined_vars(), TRUE);
      $debug_code = '<pre>' . $zz . '</pre>';
      watchdog('Stripe', $debug_code);
-   */
+    
 
     // Customer not in civicrm_stripe database.  Create a new Customer in Stripe.
     if (!isset($customer_query)) {
@@ -544,7 +544,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     // as a negative balance, but (TODO) we could decide to stash it back into the discount code to give users an
     // opportuniy to apply a discount on another non-memberhsip related item.
 
-    if (isset($params['discountcode'])) {
+    if (!empty($params['discountcode'])) {
       $discount_code = $params['discountcode'];
       $discount_object = civicrm_api3('DiscountCode', 'get', array(
          'sequential' => 1,
@@ -552,39 +552,39 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
          'code' => $discount_code,
           ));
        // amount_types: 1 = percentage, 2 = fixed, 3 = giftcard
-       if ((isset($discount_object['values'][0]['amount'])) && (isset($discount_object['values'][0]['amount_type']))) {
+       if ((!empty($discount_object['values'][0]['amount'])) && (!empty($discount_object['values'][0]['amount_type']))) {
          $discount_type = $discount_object['values'][0]['amount_type'];
          if ( $discount_type == 1 ) {
-            // Discount is a percentage. Avoid ugly math and just get the full price using price_ param.
+         // Discount is a percentage. Avoid ugly math and just get the full price using price_ param.
            foreach($params as $key=>$value){
-              if("price_" == substr($key,0,6)){
-                $price_param = $key;
-                $price_field_id = substr($key,strrpos($key,'_') + 1);
-              }
-            }
-           if (isset($params[$price_param])) {
-              $priceFieldValue = civicrm_api3('PriceFieldValue', 'get', array(
+             if("price_" == substr($key,0,6)){
+               $price_param = $key;
+               $price_field_id = substr($key,strrpos($key,'_') + 1);
+             }
+           }
+           if (!empty($params[$price_param])) {
+             $priceFieldValue = civicrm_api3('PriceFieldValue', 'get', array(
                'sequential' => 1,
                'return' => "amount",
                'id' => $params[$price_param],
                'price_field_id' => $price_field_id,
               ));
-             }
-            if (isset($priceFieldValue['values'][0]['amount'])) {
+           }
+           if (!empty($priceFieldValue['values'][0]['amount'])) {
               $priceset_amount = $priceFieldValue['values'][0]['amount'];
               $full_price = $priceset_amount * 100;
               $discount_in_cents = $full_price - $amount;
               // Set amount to full price.
               $amount = $full_price;
-             }
-         } else if ( $discount_type >= 2 ){
-          // discount is fixed or giftcard. (may be > amount)
-           $discount_amount = $discount_object['values'][0]['amount'];
-           $discount_in_cents = $discount_amount * 100;
-           // Set amount to full price.
-           $amount =  $amount + $discount_in_cents;
-          }
+           }
+        } else if ( $discount_type >= 2 ) {
+        // discount is fixed or a giftcard. (may be > amount).
+          $discount_amount = $discount_object['values'][0]['amount'];
+          $discount_in_cents = $discount_amount * 100;
+          // Set amount to full price.
+          $amount =  $amount + $discount_in_cents;
         }
+     }
         // Consider adding this to show recurring amount after payment
         // but it would be friendlier if
         //  $params['amount'] = number_format(($amount / 100), 2);
@@ -599,6 +599,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     // which is a problem for testing.  This appends 'test' to a test
     // plan to avoid that error.
     $is_live = $this->_islive;
+    $mode_tag = '';
     if ( $is_live == 0 ) {
             $mode_tag = "-test";
     }
@@ -742,4 +743,3 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     CRM_Core_Error::fatal(ts('Use direct billing instead of Transfer method.'));
   }
 }
-

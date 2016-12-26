@@ -352,11 +352,11 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     */
 
     // drastik - Uncomment this for Drupal debugging to dblog.
-    
+     /*
      $zz = print_r(get_defined_vars(), TRUE);
      $debug_code = '<pre>' . $zz . '</pre>';
      watchdog('Stripe', $debug_code);
-    
+     */
 
     // Customer not in civicrm_stripe database.  Create a new Customer in Stripe.
     if (!isset($customer_query)) {

@@ -556,7 +556,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
 
       $ignores = array(
         array(
-          'class' => Stripe_InvalidRequestError,
+          'class' => 'Stripe_InvalidRequestError',
           'type' => 'invalid_request_error',
           'message' => 'Plan already exists.',
         ),

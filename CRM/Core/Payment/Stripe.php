@@ -30,7 +30,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
    *
    * @return void
    */
-  function __construct($mode, &$paymentProcessor) {
+  public function __construct($mode, &$paymentProcessor) {
     $this->_mode = $mode;
     $this->_islive = ($mode == 'live' ? 1 : 0);
     $this->_paymentProcessor = $paymentProcessor;
@@ -45,7 +45,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
    *
    * @public
    */
-  function checkConfig() {
+  public function checkConfig() {
     $config = CRM_Core_Config::singleton();
     $error = array();
 
@@ -73,7 +73,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
    * @param Exception $exception
    *   The error!
    */
-  function logStripeException($op, $exception) {
+  public function logStripeException($op, $exception) {
     $body = print_r($exception->getJsonBody(), TRUE);
     CRM_Core_Error::debug_log_message("Stripe_Error {$op}:  <pre> {$body} </pre>");
   }
@@ -87,7 +87,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
    * @return bool
    *
    */
-  function isErrorReturn($stripeReturn) {
+  public function isErrorReturn($stripeReturn) {
       if (is_object($stripeReturn) && get_class($stripeReturn) == 'CRM_Core_Error') {
         return true;
       }
@@ -105,7 +105,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
    * @return varies
    *   Response from gateway.
    */
-  function stripeCatchErrors($op = 'create_customer', $stripe_params, $params, $ignores = array()) {
+  public function stripeCatchErrors($op = 'create_customer', $stripe_params, $params, $ignores = array()) {
     $error_url = $params['stripe_error_url'];
     $return = FALSE;
     // Check for errors before trying to submit.
@@ -230,9 +230,9 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
 
     return $return;
   }
-  
 
-  
+
+
   /**
    * Implementation of hook_civicrm_validateForm().
    *
@@ -243,8 +243,10 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
    * @param $files - Array of file properties as sent by PHP POST protocol
    * @param $form - reference to the form object
    * @param $errors - Reference to the errors array.
+   *
+   * @todo This won't run, and needs to be moved elsewhere.
    */
-  function stripe_civicrm_validateForm($formName, &$fields, &$files, &$form, &$errors) {
+  /*public function stripe_civicrm_validateForm($formName, &$fields, &$files, &$form, &$errors) {
     if (empty($form->_paymentProcessor['payment_processor_type'])) {
       return;
     }
@@ -261,15 +263,14 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
         $form->addElement($cvv2_field);
       }
     }
-  }
-  
+  }*/
+
   /**
    * Implementation of hook_civicrm_buildForm().
    *
-   * @param $formName - the name of the form
    * @param $form - reference to the form object
    */
-  function stripe_civicrm_buildForm($formName, &$form) {
+  public function buildForm(&$form) {
     $stripe_key = stripe_get_key($form);
     // If this is not a form Stripe is involved in, do nothing.
     if (empty($stripe_key)) {
@@ -281,20 +282,20 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       $params = $params[0];
     }
     $stripe_token = (empty($params['stripe_token']) ? NULL : $params['stripe_token']);
-  
+
     // Add some hidden fields for Stripe.
     if (!$form->elementExists('stripe_token')) {
       $form->setAttribute('class', $form->getAttribute('class') . ' stripe-payment-form');
       $form->addElement('hidden', 'stripe_token', $stripe_token, array('id' => 'stripe-token'));
     }
     stripe_add_stripe_js($stripe_key, $form);
-  
+
     // Add email field as it would usually be found on donation forms.
     if (!isset($form->_elementIndex['email']) && !empty($form->userEmail)) {
       $form->addElement('hidden', 'email', $form->userEmail, array('id' => 'user-email'));
     }
   }
-  
+
   /**
    * Return the stripe api public key (aka password)
    *
@@ -302,7 +303,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
    * contain a Stripe payment processor, return the api public key for
    * that processor.
    */
-  function stripe_get_key($form) {
+  public function stripe_get_key($form) {
     if (empty($form->_paymentProcessor)) {
       return;
     }
@@ -312,13 +313,13 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
         return $form->_paymentProcessor['password'];
       }
     }
-  
+
     // Otherwise we need to look through all active payprocs and find Stripe.
     $is_test = 0;
     if (isset($form->_mode)) {
       $is_test = $form->_mode == 'live' ? 0 : 1;
     }
-  
+
     // The _paymentProcessors array seems to be the most reliable way to find
     // if the form is using Stripe.
     if (!empty($form->_paymentProcessors)) {
@@ -335,11 +336,11 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     // Return NULL if this is not a form with Stripe involved.
     return NULL;
   }
-  
+
   /**
    * Given a payment processor name, return the pub key.
    */
-  function stripe_get_key_for_name($name, $is_test) {
+  public function stripe_get_key_for_name($name, $is_test) {
     try {
       $params = array('name' => $name, 'is_test' => $is_test);
       $results = civicrm_api3('PaymentProcessor', 'get', $params);
@@ -352,11 +353,11 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       return NULL;
     }
   }
-  
+
   /**
    * Add publishable key and event bindings for Stripe.js.
    */
-  function stripe_add_stripe_js($stripe_key, $form) {
+  public function stripe_add_stripe_js($stripe_key, $form) {
     $form->addElement('hidden', 'stripe_pub_key', $stripe_key, array('id' => 'stripe-pub-key'));
     CRM_Core_Resources::singleton()->addScriptFile('com.drastikbydesign.stripe', 'js/civicrm_stripe.js', 0);
   }
@@ -373,7 +374,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
    *
    * @public
    */
-  function doDirectPayment(&$params) {
+  public function doDirectPayment(&$params) {
     // Let a $0 transaction pass.
     if (empty($params['amount']) || $params['amount'] == 0) {
       return $params;
@@ -667,7 +668,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
    *
    * @public
    */
-  function doRecurPayment(&$params, $amount, $stripe_customer) {
+  public function doRecurPayment(&$params, $amount, $stripe_customer) {
     // Get recurring contrib properties.
     $frequency = $params['frequency_unit'];
     $frequency_interval = (empty($params['frequency_interval']) ? 1 : $params['frequency_interval']);
@@ -681,11 +682,11 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     // first payment of subscription entails creating a negative invoice item or negative balance first,
     // then creating the subscription at 100% full price. The customers first Stripe invoice will reflect the
     // discount. Subsequent invoices will be at the full undiscounted amount.
-    // NB: Civi currently won't send a $0 charge to a payproc extension, but it should in this case. If the discount is > 
-    // the cost of initial payment, we still send the whole discount (or giftcard) as a negative balance. 
-    // Consider not selling giftards greater than your least expensive auto-renew membership until we can override this. 
+    // NB: Civi currently won't send a $0 charge to a payproc extension, but it should in this case. If the discount is >
+    // the cost of initial payment, we still send the whole discount (or giftcard) as a negative balance.
+    // Consider not selling giftards greater than your least expensive auto-renew membership until we can override this.
     // TODO: add conditonals that look for $param['intro_offer'] (to give admins the choice of default behavior) and
-    // $params['trial_period'].   
+    // $params['trial_period'].
 
     if (!empty($params['discountcode'])) {
       $discount_code = $params['discountcode'];
@@ -733,10 +734,10 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
        $stripe_customer->save();
      }
 
-    // Tying a plan to a membership (or priceset->membership) makes it possible  
-    // to automatically change the users membership level with subscription upgrade/downgrade.  
-    // An amount is not enough information to distinguish a membership related recurring 
-    // contribution from a non-membership related one.  
+    // Tying a plan to a membership (or priceset->membership) makes it possible
+    // to automatically change the users membership level with subscription upgrade/downgrade.
+    // An amount is not enough information to distinguish a membership related recurring
+    // contribution from a non-membership related one.
     $membership_type_tag = '';
     $membership_name = '';
     if (isset($params['selectMembership'])) {
@@ -813,9 +814,9 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     // the invoice_id.  The proposed default behavor should be to always create a
     // new subscription. Upgrade/downgrades keep the same subscription id in Stripe
     // and we mirror this behavior by modifing our recurring contribution when this happens.
-    // For now, updating happens in Webhook.php as a result of modifiying the subscription 
-    // in the UI at stripe.com. Eventually we'll initiating subscription changes 
-    // from within Civi and Stripe.php. The Webhook.php code should still be relevant. 
+    // For now, updating happens in Webhook.php as a result of modifiying the subscription
+    // in the UI at stripe.com. Eventually we'll initiating subscription changes
+    // from within Civi and Stripe.php. The Webhook.php code should still be relevant.
 
     // Attach the Subscription to the Stripe Customer.
     $cust_sub_params = array(
@@ -836,7 +837,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
 
     // Insert the Stripe Subscription info.
 
-    // Let end_time be NULL if installments are ongoing indefinitely 
+    // Let end_time be NULL if installments are ongoing indefinitely
     if (empty($installments)) {
       CRM_Core_DAO::executeQuery("INSERT INTO civicrm_stripe_subscriptions
         (subscription_id, customer_id, contribution_recur_id, processor_id, is_live )
@@ -851,7 +852,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
         VALUES (%1, %2, %3, %4, %5, '{$this->_islive}')", $query_params);
     }
 
-    //  Don't return a $params['trxn_id'] here or else recurring membership contribs will be set 
+    //  Don't return a $params['trxn_id'] here or else recurring membership contribs will be set
     //  "Completed" prematurely.  Webhook.php does that.
 
     return $params;
@@ -869,7 +870,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
    * @access public
    *
    */
-  function doTransferCheckout(&$params, $component) {
+  public function doTransferCheckout(&$params, $component) {
     CRM_Core_Error::fatal(ts('Use direct billing instead of Transfer method.'));
   }
 }

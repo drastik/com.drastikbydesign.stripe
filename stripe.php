@@ -48,12 +48,15 @@ function stripe_civicrm_install() {
 
   CRM_Core_DAO::executeQuery("
   CREATE TABLE IF NOT EXISTS `civicrm_stripe_subscriptions` (
+    `subscription_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
     `customer_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-    `invoice_id` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+    `contribution_recur_id` INT(10) UNSIGNED NULL DEFAULT NULL,
     `end_time` int(11) NOT NULL DEFAULT '0',
     `is_live` tinyint(4) NOT NULL COMMENT 'Whether this is a live or test transaction',
     `processor_id` int(10) DEFAULT NULL COMMENT 'ID from civicrm_payment_processor',
-    KEY `end_time` (`end_time`)
+    KEY `end_time` (`end_time`), PRIMARY KEY `subscription_id` (`subscription_id`),
+    ADD CONSTRAINT `FK_civicrm_stripe_contribution_recur_id` FOREIGN KEY (`contribution_recur_id`) 
+    REFERENCES `civicrm4`.`civicrm_contribution_recur`(`id`) ON DELETE SET NULL ON UPDATE RESTRICT 
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
   ");
 
@@ -115,6 +118,7 @@ function stripe_civicrm_disable() {
 function stripe_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
   return _stripe_civix_civicrm_upgrade($op, $queue);
 }
+
 
 /**
  * Implementation of hook_civicrm_validateForm().
@@ -243,7 +247,6 @@ function stripe_add_stripe_js($stripe_key, $form) {
   $form->addElement('hidden', 'stripe_pub_key', $stripe_key, array('id' => 'stripe-pub-key'));
   CRM_Core_Resources::singleton()->addScriptFile('com.drastikbydesign.stripe', 'js/civicrm_stripe.js', 0);
 }
-
 /**
  * Implementation of hook_civicrm_managed().
  *

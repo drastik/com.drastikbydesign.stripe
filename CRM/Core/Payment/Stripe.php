@@ -1,5 +1,72 @@
 <?php
 
+  /**
+   * Return the stripe api public key (aka password)
+   *
+   * If this form could conceiveably now or at any time in the future
+   * contain a Stripe payment processor, return the api public key for
+   * that processor.
+   */
+  function stripe_get_key($form) {
+    if (empty($form->_paymentProcessor)) {
+      return;
+    }
+    // Only return first value if Stripe is the only/default.
+    if ($form->_paymentProcessor['payment_processor_type'] == 'Stripe') {
+      if (isset($form->_paymentProcessor['password'])) {
+        return $form->_paymentProcessor['password'];
+      }
+    }
+
+    // Otherwise we need to look through all active payprocs and find Stripe.
+    $is_test = 0;
+    if (isset($form->_mode)) {
+      $is_test = $form->_mode == 'live' ? 0 : 1;
+    }
+
+    // The _paymentProcessors array seems to be the most reliable way to find
+    // if the form is using Stripe.
+    if (!empty($form->_paymentProcessors)) {
+      foreach ($form->_paymentProcessors as $pp) {
+        if ($pp['payment_processor_type'] == 'Stripe') {
+          if (!empty($pp['password'])) {
+            return $pp['password'];
+          }
+          // We have a match.
+          return stripe_get_key_for_name($pp['name'], $is_test);
+        }
+      }
+    }
+    // Return NULL if this is not a form with Stripe involved.
+    return NULL;
+  }
+
+  /**
+   * Given a payment processor name, return the pub key.
+   */
+  function stripe_get_key_for_name($name, $is_test) {
+    try {
+      $params = array('name' => $name, 'is_test' => $is_test);
+      $results = civicrm_api3('PaymentProcessor', 'get', $params);
+      if ($results['count'] == 1) {
+        $result = array_pop($results['values']);
+        return $result['password'];
+      }
+    }
+    catch (CiviCRM_API3_Exception $e) {
+      return NULL;
+    }
+  }
+
+  /**
+   * Add publishable key and event bindings for Stripe.js.
+   */
+  function stripe_add_stripe_js($stripe_key, $form) {
+    $form->addElement('hidden', 'stripe_pub_key', $stripe_key, array('id' => 'stripe-pub-key'));
+    CRM_Core_Resources::singleton()->addScriptFile('com.drastikbydesign.stripe', 'js/civicrm_stripe.js', 0);
+  }
+
+
 /*
  * Payment Processor class for Stripe
  */
@@ -231,8 +298,6 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     return $return;
   }
 
-
-
   /**
    * Implementation of hook_civicrm_validateForm().
    *
@@ -244,26 +309,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
    * @param $form - reference to the form object
    * @param $errors - Reference to the errors array.
    *
-   * @todo This won't run, and needs to be moved elsewhere.
    */
-  /*public function stripe_civicrm_validateForm($formName, &$fields, &$files, &$form, &$errors) {
-    if (empty($form->_paymentProcessor['payment_processor_type'])) {
-      return;
-    }
-    // If Stripe is active here.
-    if (isset($form->_elementIndex['stripe_token'])) {
-      if ($form->elementExists('credit_card_number')) {
-        $cc_field = $form->getElement('credit_card_number');
-        $form->removeElement('credit_card_number', true);
-        $form->addElement($cc_field);
-      }
-      if ($form->elementExists('cvv2')) {
-        $cvv2_field = $form->getElement('cvv2');
-        $form->removeElement('cvv2', true);
-        $form->addElement($cvv2_field);
-      }
-    }
-  }*/
 
   /**
    * Implementation of hook_civicrm_buildForm().
@@ -294,72 +340,6 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     if (!isset($form->_elementIndex['email']) && !empty($form->userEmail)) {
       $form->addElement('hidden', 'email', $form->userEmail, array('id' => 'user-email'));
     }
-  }
-
-  /**
-   * Return the stripe api public key (aka password)
-   *
-   * If this form could conceiveably now or at any time in the future
-   * contain a Stripe payment processor, return the api public key for
-   * that processor.
-   */
-  public function stripe_get_key($form) {
-    if (empty($form->_paymentProcessor)) {
-      return;
-    }
-    // Only return first value if Stripe is the only/default.
-    if ($form->_paymentProcessor['payment_processor_type'] == 'Stripe') {
-      if (isset($form->_paymentProcessor['password'])) {
-        return $form->_paymentProcessor['password'];
-      }
-    }
-
-    // Otherwise we need to look through all active payprocs and find Stripe.
-    $is_test = 0;
-    if (isset($form->_mode)) {
-      $is_test = $form->_mode == 'live' ? 0 : 1;
-    }
-
-    // The _paymentProcessors array seems to be the most reliable way to find
-    // if the form is using Stripe.
-    if (!empty($form->_paymentProcessors)) {
-      foreach ($form->_paymentProcessors as $pp) {
-        if ($pp['payment_processor_type'] == 'Stripe') {
-          if (!empty($pp['password'])) {
-            return $pp['password'];
-          }
-          // We have a match.
-          return stripe_get_key_for_name($pp['name'], $is_test);
-        }
-      }
-    }
-    // Return NULL if this is not a form with Stripe involved.
-    return NULL;
-  }
-
-  /**
-   * Given a payment processor name, return the pub key.
-   */
-  public function stripe_get_key_for_name($name, $is_test) {
-    try {
-      $params = array('name' => $name, 'is_test' => $is_test);
-      $results = civicrm_api3('PaymentProcessor', 'get', $params);
-      if ($results['count'] == 1) {
-        $result = array_pop($results['values']);
-        return $result['password'];
-      }
-    }
-    catch (CiviCRM_API3_Exception $e) {
-      return NULL;
-    }
-  }
-
-  /**
-   * Add publishable key and event bindings for Stripe.js.
-   */
-  public function stripe_add_stripe_js($stripe_key, $form) {
-    $form->addElement('hidden', 'stripe_pub_key', $stripe_key, array('id' => 'stripe-pub-key'));
-    CRM_Core_Resources::singleton()->addScriptFile('com.drastikbydesign.stripe', 'js/civicrm_stripe.js', 0);
   }
 
   /**

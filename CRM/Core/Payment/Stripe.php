@@ -231,8 +231,6 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     return $return;
   }
 
-
-
   /**
    * Implementation of hook_civicrm_validateForm().
    *
@@ -244,26 +242,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
    * @param $form - reference to the form object
    * @param $errors - Reference to the errors array.
    *
-   * @todo This won't run, and needs to be moved elsewhere.
    */
-  /*public function stripe_civicrm_validateForm($formName, &$fields, &$files, &$form, &$errors) {
-    if (empty($form->_paymentProcessor['payment_processor_type'])) {
-      return;
-    }
-    // If Stripe is active here.
-    if (isset($form->_elementIndex['stripe_token'])) {
-      if ($form->elementExists('credit_card_number')) {
-        $cc_field = $form->getElement('credit_card_number');
-        $form->removeElement('credit_card_number', true);
-        $form->addElement($cc_field);
-      }
-      if ($form->elementExists('cvv2')) {
-        $cvv2_field = $form->getElement('cvv2');
-        $form->removeElement('cvv2', true);
-        $form->addElement($cvv2_field);
-      }
-    }
-  }*/
 
   /**
    * Implementation of hook_civicrm_buildForm().
@@ -271,7 +250,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
    * @param $form - reference to the form object
    */
   public function buildForm(&$form) {
-    $stripe_key = stripe_get_key($form);
+    $stripe_key = self::stripe_get_key($form);
     // If this is not a form Stripe is involved in, do nothing.
     if (empty($stripe_key)) {
       return;
@@ -288,7 +267,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       $form->setAttribute('class', $form->getAttribute('class') . ' stripe-payment-form');
       $form->addElement('hidden', 'stripe_token', $stripe_token, array('id' => 'stripe-token'));
     }
-    stripe_add_stripe_js($stripe_key, $form);
+    self::stripe_add_stripe_js($stripe_key, $form);
 
     // Add email field as it would usually be found on donation forms.
     if (!isset($form->_elementIndex['email']) && !empty($form->userEmail)) {
@@ -329,7 +308,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
             return $pp['password'];
           }
           // We have a match.
-          return stripe_get_key_for_name($pp['name'], $is_test);
+          return self::stripe_get_key_for_name($pp['name'], $is_test);
         }
       }
     }
@@ -361,6 +340,8 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     $form->addElement('hidden', 'stripe_pub_key', $stripe_key, array('id' => 'stripe-pub-key'));
     CRM_Core_Resources::singleton()->addScriptFile('com.drastikbydesign.stripe', 'js/civicrm_stripe.js', 0);
   }
+
+
 
   /**
    * Submit a payment using Stripe's PHP API:

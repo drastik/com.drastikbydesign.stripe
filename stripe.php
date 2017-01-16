@@ -151,3 +151,35 @@ function stripe_civicrm_managed(&$entities) {
 
   return _stripe_civix_civicrm_managed($entities);
 }
+
+/**
+   * Implementation of hook_civicrm_validateForm().
+   *
+   * Prevent server validation of cc fields
+   *
+   * @param $formName - the name of the form
+   * @param $fields - Array of name value pairs for all 'POST'ed form values
+   * @param $files - Array of file properties as sent by PHP POST protocol
+   * @param $form - reference to the form object
+   * @param $errors - Reference to the errors array.
+   *
+*/
+
+ function stripe_civicrm_validateForm($formName, &$fields, &$files, &$form, &$errors) {
+    if (empty($form->_paymentProcessor['payment_processor_type'])) {
+      return;
+    }
+    // If Stripe is active here.
+    if (isset($form->_elementIndex['stripe_token'])) {
+      if ($form->elementExists('credit_card_number')) {
+        $cc_field = $form->getElement('credit_card_number');
+        $form->removeElement('credit_card_number', true);
+        $form->addElement($cc_field);
+      }
+      if ($form->elementExists('cvv2')) {
+        $cvv2_field = $form->getElement('cvv2');
+        $form->removeElement('cvv2', true);
+        $form->addElement($cvv2_field);
+      }
+    }
+  }

@@ -2,6 +2,9 @@
 require_once('packages/stripe-php/init.php');
 /**
  * Collection of upgrade steps.
+ * DO NOT USE a naming scheme other than upgrade_N, where N is an integer.  
+ * Naming scheme upgrade_X_Y_Z is offically wrong!  
+ * https://chat.civicrm.org/civicrm/pl/usx3pfjzjbrhzpewuggu1e6ftw
  */
 class CRM_Stripe_Upgrader extends CRM_Stripe_Upgrader_Base {
 
@@ -63,52 +66,81 @@ class CRM_Stripe_Upgrader extends CRM_Stripe_Upgrader_Base {
    * @return TRUE on success
    * @throws Exception
    */
-  public function upgrade_4_6_01() {
+  public function upgrade_5001() {
     $config = CRM_Core_Config::singleton();
     $dbName = DB::connect($config->dsn)->_db;
 
     $sql = "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = %1 AND TABLE_NAME = 'civicrm_stripe_customers' AND COLUMN_NAME = 'processor_id'";
     $dao = CRM_Core_DAO::executeQuery($sql, array(1 => array($dbName, 'String')));
-
     if ($dao->N) {
-      $this->ctx->log->info('Skipped civicrm_stripe update 4601.  Column processor_id already present on civicrm_stripe_customers and civicrm_stripe_plans table.');
+      $this->ctx->log->info('Skipped civicrm_stripe update 4701.  Column processor_id already present on our customers, plans and subscriptions tables.');
     }
     else {
-      $this->ctx->log->info('Applying civicrm_stripe update 4601.  Adding processor_id to civicrm_stripe_customers and civicrm_stripe_plans table.');
+      $this->ctx->log->info('Applying civicrm_stripe update 4701.  Adding processor_id to the civicrm_stripe_customers, civicrm_stripe_plans and civicrm_stripe_subscriptions tables.');
       CRM_Core_DAO::executeQuery('ALTER TABLE civicrm_stripe_customers ADD COLUMN `processor_id` int(10) DEFAULT NULL COMMENT "ID from civicrm_payment_processor"');
       CRM_Core_DAO::executeQuery('ALTER TABLE civicrm_stripe_plans ADD COLUMN `processor_id` int(10) DEFAULT NULL COMMENT "ID from civicrm_payment_processor"');
       CRM_Core_DAO::executeQuery('ALTER TABLE civicrm_stripe_subscriptions ADD COLUMN `processor_id` int(10) DEFAULT NULL COMMENT "ID from civicrm_payment_processor"');
+    }
+     return TRUE;
+  }
+
+
+  /**
+   * Populate processor_id column in civicrm_stripe_customers, civicrm_stripe_plans and civicrm_stripe_subscriptions tables.
+   *
+   * @return TRUE on success
+   * @throws Exception
+   */
+  public function upgrade_5002() {
+    $config = CRM_Core_Config::singleton();
+    $dbName = DB::connect($config->dsn)->_db;
+
+    $null_count =  CRM_Core_DAO::executeQuery('SELECT COUNT(*) FROM civicrm_stripe_customers where processor_id IS NULL') + 
+      CRM_Core_DAO::executeQuery('SELECT COUNT(*) FROM civicrm_stripe_plans where processor_id IS NULL') +
+      CRM_Core_DAO::executeQuery('SELECT COUNT(*) FROM civicrm_stripe_subscriptions where processor_id IS NULL');
+    if ( $null_count == 0 ) {
+      $this->ctx->log->info('Skipped civicrm_stripe update 4702.  No nulls found in column processor_id in our tables.');
+      return TRUE;
+    } 
+    else { 
       try {
         // Set processor ID if there's only one.
         $processorCount = civicrm_api3('PaymentProcessorType', 'get', array(
           'name' => "Stripe",
-          'api.PaymentProcessor.getcount' => array('is_test' => 0),
+          'api.PaymentProcessor.get' => array('is_test' => 0),
         ));
         foreach ($processorCount['values'] as $processorType) {
           if (!empty($processorType['api.PaymentProcessor.get']['id'])) {
+            $stripe_live =$processorType['api.PaymentProcessor.get']['id'];
+            $stripe_test = $stripe_live + 1;
             $p = array(
-              1 => array($processorType['api.PaymentProcessor.get']['id'], 'Integer'),
+              1 => array($stripe_live, 'Integer'),
+              2 => array($stripe_test, 'Integer'),
             );
-            CRM_Core_DAO::executeQuery('UPDATE civicrm_stripe_customers SET processor_id = %1 where processor_id IS NULL', $p);
-            CRM_Core_DAO::executeQuery('UPDATE civicrm_stripe_plans SET processor_id = %1 where processor_id IS NULL', $p);
-            CRM_Core_DAO::executeQuery('UPDATE civicrm_stripe_subscriptions SET processor_id = %1 where processor_id IS NULL', $p);
+            CRM_Core_DAO::executeQuery('UPDATE `civicrm_stripe_customers` SET processor_id = %1 where processor_id IS NULL and is_live = 1', $p);
+            CRM_Core_DAO::executeQuery('UPDATE `civicrm_stripe_customers` SET processor_id = %2 where processor_id IS NULL and is_live = 0', $p);
+            CRM_Core_DAO::executeQuery('UPDATE `civicrm_stripe_plans` SET processor_id = %1 where processor_id IS NULL and is_live = 1', $p);
+            CRM_Core_DAO::executeQuery('UPDATE `civicrm_stripe_plans` SET processor_id = %2 where processor_id IS NULL and is_live = 0', $p);
+            CRM_Core_DAO::executeQuery('UPDATE `civicrm_stripe_subscriptions` SET processor_id = %1 where processor_id IS NULL and is_live = 1', $p);
+            CRM_Core_DAO::executeQuery('UPDATE `civicrm_stripe_subscriptions` SET processor_id = %2 where processor_id IS NULL and is_live = 0', $p);
           }
         }
       }
       catch (CiviCRM_API3_Exception $e) {
-        return TRUE;
+        return;
       }
     }
     return TRUE;
   }
 
+ 
  /**
-   * Add subscription_id column to civicrm_stripe_subscriptions table and populate.
+   * Add subscription_id column to civicrm_stripe_subscriptions table.
    *
    * @return TRUE on success
    * @throws Exception
    */
-  public function upgrade_4_6_02() {
+  public function upgrade_5003() {
     $config = CRM_Core_Config::singleton();
     $dbName = DB::connect($config->dsn)->_db;
 
@@ -116,13 +148,33 @@ class CRM_Stripe_Upgrader extends CRM_Stripe_Upgrader_Base {
     $dao = CRM_Core_DAO::executeQuery($sql, array(1 => array($dbName, 'String')));
 
     if ($dao->N) {
-      $this->ctx->log->info('Skipped civicrm_stripe update 4602.  Column  subscription_id already present in civicrm_stripe_subscriptions table.');
+      $this->ctx->log->info('Skipped civicrm_stripe update 4703.  Column  subscription_id already present in civicrm_stripe_subscriptions table.');
     }
     else {
-      $this->ctx->log->info('Applying civicrm_stripe update 4602.  Adding subscription_id to civicrm_stripe_subscriptions.');
+      $this->ctx->log->info('Applying civicrm_stripe update 4703.  Adding subscription_id to civicrm_stripe_subscriptions.');
       CRM_Core_DAO::executeQuery('ALTER TABLE civicrm_stripe_subscriptions ADD COLUMN `subscription_id` varchar(255) DEFAULT NULL COMMENT "Subscription ID from Stripe" FIRST');
       CRM_Core_DAO::executeQuery('ALTER TABLE `civicrm_stripe_subscriptions` ADD UNIQUE KEY(`subscription_id`)');
-      $customer_infos = CRM_Core_DAO::executeQuery("SELECT customer_id,processor_id
+
+        }
+      return TRUE;
+    }
+   
+ /**
+   * Populates the subscription_id column in table civicrm_stripe_subscriptions.
+   *
+   * @return TRUE on success
+   * @throws Exception
+   */
+  public function upgrade_5004() {
+    $config = CRM_Core_Config::singleton();
+    $dbName = DB::connect($config->dsn)->_db;
+
+    $null_count =  CRM_Core_DAO::executeQuery('SELECT COUNT(*) FROM civicrm_stripe_subscriptions where subscription_id IS NULL'); 
+    if ( $null_count == 0 ) {
+      $this->ctx->log->info('Skipped civicrm_stripe update 4704.  No nulls found in column subscription_id in our civicrm_stripe_subscriptions table.');
+    } 
+    else { 
+    $customer_infos = CRM_Core_DAO::executeQuery("SELECT customer_id,processor_id
       FROM `civicrm_stripe_subscriptions`;");
       while ( $customer_infos->fetch() ) {
         $processor_id = $customer_infos->processor_id;
@@ -134,8 +186,8 @@ class CRM_Stripe_Upgrader extends CRM_Stripe_Upgrader_Base {
              ));
           }
           catch (Exception $e) { 
-          // CRM_Core_Error::fatal('Cannot find Stripe API key: ' . $e->getMessage());
-            return TRUE;
+            $this->ctx->log->info('Update 4704 failed. Has Stripe been removed as a payment processor? ');
+            return;
           }
           try {
             \Stripe\Stripe::setApiKey($stripe_key);
@@ -150,22 +202,23 @@ class CRM_Stripe_Upgrader extends CRM_Stripe_Upgrader_Base {
                );
               CRM_Core_DAO::executeQuery('UPDATE civicrm_stripe_subscriptions SET subscription_id = %1 where customer_id = %2;', $query_params);
             }
-           } catch (Exception $e) {
-             return TRUE;
-           }
-        }
-     }
-    return TRUE;
+          } 
+           catch (Exception $e) {
+            CRM_Core_Error::fatal('Cannot find Stripe API key: ' . $e->getMessage());
+             return;
+          }
+      }
     }
-
+       return TRUE;
+  }
 
  /**
-   * Add contribution_recur_id column to civicrm_stripe_subscriptions table and populate.
+   * Add contribution_recur_id column to civicrm_stripe_subscriptions table.
    *
    * @return TRUE on success
    * @throws Exception
    */
-  public function upgrade_4_6_03() {
+  public function upgrade_5005() {
     $config = CRM_Core_Config::singleton();
     $dbName = DB::connect($config->dsn)->_db;
 
@@ -173,19 +226,32 @@ class CRM_Stripe_Upgrader extends CRM_Stripe_Upgrader_Base {
     $dao = CRM_Core_DAO::executeQuery($sql, array(1 => array($dbName, 'String')));
 
     if ($dao->N) {
-      $this->ctx->log->info('Skipped civicrm_stripe update 4603.  Column contribution_recur_id already present in civicrm_stripe_subscriptions table.');
+      $this->ctx->log->info('Skipped civicrm_stripe update 4705.  Column contribution_recur_id already present in civicrm_stripe_subscriptions table.');
     }
     else {
-      $this->ctx->log->info('Applying civicrm_stripe update 4603.  Adding contribution_recur_id to civicrm_stripe_subscriptions table.');
+      $this->ctx->log->info('Applying civicrm_stripe update 4705.  Adding contribution_recur_id to civicrm_stripe_subscriptions table.');
       CRM_Core_DAO::executeQuery('ALTER TABLE civicrm_stripe_subscriptions 
        ADD COLUMN `contribution_recur_id` int(10) UNSIGNED DEFAULT NULL 
        COMMENT "FK ID from civicrm_contribution_recur" AFTER `customer_id`');
       CRM_Core_DAO::executeQuery('ALTER TABLE `civicrm_stripe_subscriptions` ADD INDEX(`contribution_recur_id`);');
       CRM_Core_DAO::executeQuery('ALTER TABLE `civicrm_stripe_subscriptions` ADD CONSTRAINT `FK_civicrm_stripe_contribution_recur_id` FOREIGN KEY (`contribution_recur_id`) REFERENCES `civicrm_contribution_recur`(`id`) ON DELETE SET NULL ON UPDATE RESTRICT;');
-      // Method 1: An approach to populate the recurring id column that works if 
-      // there have never been any subscription changes. 
-          
-      $subscriptions  = CRM_Core_DAO::executeQuery("SELECT invoice_id,is_live
+    }
+      return TRUE;
+  }
+
+ /**
+   *  Method 1 for populating the contribution_recur_id column in the civicrm_stripe_subscriptions table.
+   *  ( A simple approach if that works if there have never been any susbcription edits in the Stripe UI. )
+
+   * @return TRUE on success
+   * @throws Exception
+   */
+
+  public function upgrade_5006() {
+    $config = CRM_Core_Config::singleton();
+    $dbName = DB::connect($config->dsn)->_db;
+
+    $subscriptions  = CRM_Core_DAO::executeQuery("SELECT invoice_id,is_live
       FROM `civicrm_stripe_subscriptions`;");
       while ( $subscriptions->fetch() ) {
         $test_mode = (int)!$subscriptions->is_live;
@@ -205,15 +271,26 @@ class CRM_Stripe_Upgrader extends CRM_Stripe_Upgrader_Base {
             CRM_Core_DAO::executeQuery('UPDATE civicrm_stripe_subscriptions SET contribution_recur_id = %1 WHERE invoice_id = %2;', $p);
           }
         } 
-        catch (CiviCRM_API3_Exception $e) {
-        return TRUE;
+          catch (CiviCRM_API3_Exception $e) {
+            return;
         }
-       }
-      // End Method 1. 
-/*
-      //  Method 2: for installs where the have been subscription edits. 
+      }
+        return TRUE;
+  }
 
-      $subscriptions  = CRM_Core_DAO::executeQuery("SELECT customer_id,is_live,processor_id
+
+ /**
+   *  Method 2 for populating the contribution_recur_id column in the  civicrm_stripe_subscriptions table. Uncomment this and comment 4706.
+   *  ( A more convoluted approach that works if there HAVE been susbcription edits in the Stripe UI. )
+   * @return TRUE on success.  Please let users uncomment this as needed and increment past 4707 for the next upgrade.
+   * @throws Exception
+   */
+/*
+  public function upgrade_5007() {
+    $config = CRM_Core_Config::singleton();
+    $dbName = DB::connect($config->dsn)->_db;
+
+    $subscriptions  = CRM_Core_DAO::executeQuery("SELECT customer_id,is_live,processor_id
       FROM `civicrm_stripe_subscriptions`;");
       while ( $subscriptions->fetch() ) {
         $test_mode = (int)!$subscriptions->is_live;
@@ -224,6 +301,7 @@ class CRM_Stripe_Upgrader extends CRM_Stripe_Upgrader_Base {
         $customer = CRM_Core_DAO::executeQuery("SELECT email
           FROM `civicrm_stripe_customers` WHERE id = %1 AND is_live = %2;", $p);
         $customer->fetch();
+        //  Try the billing email first, since that's what we send to Stripe.
         try {
           $contact = civicrm_api3('Email', 'get', array(
            'sequential' => 1,
@@ -234,6 +312,7 @@ class CRM_Stripe_Upgrader extends CRM_Stripe_Upgrader_Base {
           ));
          } 
         catch (CiviCRM_API3_Exception $e) { 
+        // Uh oh, that didn't work.  Try to retrieve the recurring id using the primary email.
           $contact = civicrm_api3('Contact', 'get', array(
            'sequential' => 1,
            'return' => "id",
@@ -250,11 +329,12 @@ class CRM_Stripe_Upgrader extends CRM_Stripe_Upgrader_Base {
             );
             CRM_Core_DAO::executeQuery('UPDATE civicrm_stripe_subscriptions SET contribution_recur_id = %1 WHERE customer_id = %2;', $p);
          } else {
+            // Crap.
+            $this->ctx->log->info('Update 4707 failed.  Consider adding recurring IDs manuallly to civicrm_stripe_subscriptions. ');
+            return;
         }
       }
-     // End Method 2
-*/
-      }
-    return TRUE;
+       return TRUE;
   }
+*/
 }

@@ -722,7 +722,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     $membership_type_tag = '';
     $membership_name = '';
     if (isset($params['selectMembership'])) {
-      $membership_type_id = $params['selectMembership'];
+      $membership_type_id = $params['selectMembership'][0];
       $membership_type_tag = 'membertype_' . $membership_type_id . '-';
       $membershipType = civicrm_api3('MembershipType', 'get', array(
        'sequential' => 1,

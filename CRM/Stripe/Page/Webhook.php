@@ -439,9 +439,22 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
           ));
            }
            
-          return;
           break;
 
+      // Keep plans table in sync with Stripe when a plan is deleted.
+     case 'plan.deleted':
+       $plan_id = $stripe_event_data->data->object->id;
+       // Prepare escaped query params.
+        $query_params = array(
+          1 => array($plan_id, 'String'),
+          2 => array($processorId, 'Integer'),
+        );
+       CRM_Core_DAO::executeQuery("DELETE FROM civicrm_stripe_plans WHERE 
+         plan_id = %1 AND  processor_id = %2", $query_params);
+ 
+       break;
+
+       return;
 
     }
 

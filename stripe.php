@@ -55,8 +55,8 @@ function stripe_civicrm_install() {
     `is_live` tinyint(4) NOT NULL COMMENT 'Whether this is a live or test transaction',
     `processor_id` int(10) DEFAULT NULL COMMENT 'ID from civicrm_payment_processor',
     KEY `end_time` (`end_time`), PRIMARY KEY `subscription_id` (`subscription_id`),
-    ADD CONSTRAINT `FK_civicrm_stripe_contribution_recur_id` FOREIGN KEY (`contribution_recur_id`) 
-    REFERENCES `civicrm4`.`civicrm_contribution_recur`(`id`) ON DELETE SET NULL ON UPDATE RESTRICT 
+    CONSTRAINT `FK_civicrm_stripe_contribution_recur_id` FOREIGN KEY (`contribution_recur_id`) 
+    REFERENCES `civicrm_contribution_recur`(`id`) ON DELETE SET NULL ON UPDATE RESTRICT 
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
   ");
 

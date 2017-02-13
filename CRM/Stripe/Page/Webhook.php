@@ -37,6 +37,18 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
          'options' => array('limit' => 1, 'sort' => 'id DESC'),
          'contribution_test' => $test_mode,
         ));
+        // Workaround for CRM-19945.
+        try {
+          $recurring_info->previous_completed_contribution_id = civicrm_api3('contribution', 'getvalue', array(
+           'return' => 'id',
+           'contribution_recur_id' => $recurring_info->id,
+           'contribution_status_id' => array('IN' => array('Completed')),
+           'options' => array('limit' => 1, 'sort' => 'id DESC'),
+           'contribution_test' => $test_mode,
+          ));
+        } catch (Exception $e) {
+         // This is fine....could only be a pending in the db.
+        }
         if (!empty($recurring_info->previous_contribution_id)) {
          //$previous_contribution_query->fetch();
          }
@@ -183,7 +195,10 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
          // prorated invoices.  
 	 
          $result = civicrm_api3('Contribution', 'repeattransaction', array(
-	   'contribution_recur_id' => $recurring_info->id,
+           // Actually, don't use contribution_recur_id until CRM-19945 patches make it in to 4.6/4.7
+           // and we have a way to require a minimum minor CiviCRM version.
+	   //'contribution_recur_id' => $recurring_info->id,
+	   'original_contribution_id' => $recurring_info->previous_completed_contribution_id,
            'contribution_status_id' => "Completed",
            'receive_date' => $receive_date,
            'trxn_id' => $charge_id,
@@ -263,7 +278,8 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
 
           }
           else {
-          // Create a new Failed contribution
+          // Record a Failed contribution. Use repeattransaction for this when CRM-19984
+          // patch makes it in 4.6/4.7.
           $result = civicrm_api3('Contribution', 'create', array(
 	    'contribution_recur_id' => $recurring_info->id,
             'contribution_status_id' => "Failed",
@@ -404,7 +420,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
       CRM_Core_DAO::executeQuery("UPDATE civicrm_stripe_subscriptions 
         SET contribution_recur_id  = %1 where subscription_id = %2", $query_params); 
 
-       // Find out if the plan is ascociated with a membership and if so 
+       // Find out if the plan is ascociated with a membership and if so
        // adjust it to the new level.
 
           $membership_result = civicrm_api3('Membership', 'get', array(
@@ -419,8 +435,8 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
              $new_membership_type_id = substr($plan_name_elements[0],strrpos($plan_name_elements[0],'_') + 1);
           }
 
-          // Adjust to the new membership level.  
-          if (!empty($new_membership_type_id) && !empty($membership_result['values'][0]['id'])) { 
+          // Adjust to the new membership level.
+          if (!empty($new_membership_type_id)) {
             $membership_id = $membership_result['values'][0]['id'];
             $result = civicrm_api3('Membership', 'create', array(
              'sequential' => 1,

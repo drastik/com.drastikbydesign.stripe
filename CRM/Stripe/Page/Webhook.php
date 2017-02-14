@@ -26,7 +26,9 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
           $recurring_info->id = $sub_info_query->contribution_recur_id;
           }
           else {
-          CRM_Core_Error::Fatal("Error relating this subscription id ($subscription_id) to the one in civicrm_stripe_subscriptions");
+            header('HTTP/1.1 400 Bad Request');
+            CRM_Core_Error::Fatal("Error relating this subscription id ($subscription_id) to the one in civicrm_stripe_subscriptions");
+            CRM_Utils_System::civiExit();
           }
         }
         // Same approach as api repeattransaction. Find last contribution ascociated 
@@ -41,7 +43,9 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
          //$previous_contribution_query->fetch();
          }
         else {
+          header('HTTP/1.1 400 Bad Request');
           CRM_Core_Error::Fatal("ERROR: Stripe could not find contribution ($recurring_info->previous_contribution_id)  in civicrm_contribution: " . $stripe_event_data);
+          CRM_Utils_System::civiExit();
         }
         $current_recurring_contribution = civicrm_api3('ContributionRecur', 'get', array(
           'sequential' => 1,
@@ -63,7 +67,9 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
     $data_raw = file_get_contents("php://input");
     $data = json_decode($data_raw);
     if (!$data) {
+      header('HTTP/1.1 406 Not acceptable');
       CRM_Core_Error::Fatal("Stripe Callback: cannot json_decode data, exiting. <br /> $data");
+      CRM_Utils_System::civiExit();
     }
 
     // Test mode is the opposite of live mode.  
@@ -88,7 +94,9 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
       }
     }
     catch (CiviCRM_API3_Exception $e) {
+      header('HTTP/1.1 400 Bad Request');
       CRM_Core_Error::fatal('Cannot find Stripe API key: ' . $e->getMessage());
+      CRM_Utils_System::civiExit();
     }
 
     require_once ("packages/stripe-php/init.php");
@@ -117,8 +125,9 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
 	    $fee = $balance_transaction->fee / 100;
           }
           catch(Exception $e) {
+            header('HTTP/1.1 400 Bad Request');
             CRM_Core_Error::Fatal("Failed to retrieve Stripe charge.  Message: " . $e->getMessage());
-            exit();
+            CRM_Utils_System::civiExit();
           }
         } else {
         // The customer had a credit on their subscription from a downgrade or gift card. 
@@ -223,7 +232,9 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
           $charge = \Stripe\Charge::retrieve($stripe_event_data->data->object->charge);
         }
         catch(Exception $e) {
+          header('HTTP/1.1 400 Bad Request');
           CRM_Core_Error::Fatal("Failed to retrieve Stripe charge.  Message: " . $e->getMessage());
+          CRM_Utils_System::civiExit();
         }
 
         // Build some params.

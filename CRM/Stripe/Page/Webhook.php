@@ -257,7 +257,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
         $new_invoice_id = $stripe_event_data->data->object->id;
         $charge_id = $stripe_event_data->data->object->charge;
         $attempt_count = $stripe_event_data->data->object->attempt_count;
-        $fail_date = date("Y-m-d H:i:s", $stripe_event_data->data->object->date);
+        $fail_date = date("Y-m-d H:i:s");
         $amount = $charge->amount / 100;
         $fee_amount = isset($charge->fee) ? ($charge->fee / 100) : 0;
         $transaction_id = $charge->id;

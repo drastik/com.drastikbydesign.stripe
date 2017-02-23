@@ -127,6 +127,7 @@ class CRM_Stripe_Upgrader extends CRM_Stripe_Upgrader_Base {
         }
       }
       catch (CiviCRM_API3_Exception $e) {
+        CRM_Core_Error::debug_log_message("Cannot find a PaymentProcessorType named Stripe.", $out = false);
         return;
       }
     }
@@ -186,7 +187,7 @@ class CRM_Stripe_Upgrader extends CRM_Stripe_Upgrader_Base {
              ));
           }
           catch (Exception $e) { 
-            $this->ctx->log->info('Update 4704 failed. Has Stripe been removed as a payment processor? ');
+            CRM_Core_Error::debug_log_message('Update 4704 failed. Has Stripe been removed as a payment processor?', $out = false);
             return;
           }
           try {
@@ -195,17 +196,19 @@ class CRM_Stripe_Upgrader extends CRM_Stripe_Upgrader_Base {
              'customer'=> $customer_id,
              'limit'=>1,
             ));
-            if (!empty($subscription)) {
-              $query_params = array(
-                1 => array($subscription['data'][0]['id'], 'String'),
-                2 => array($customer_id, 'String'),
-               );
-              CRM_Core_DAO::executeQuery('UPDATE civicrm_stripe_subscriptions SET subscription_id = %1 where customer_id = %2;', $query_params);
-            }
           } 
-           catch (Exception $e) {
-            CRM_Core_Error::fatal('Cannot find Stripe API key: ' . $e->getMessage());
-             return;
+          catch (Exception $e) {
+            // Don't quit here.  A missing customer in Stipe is OK.  They don't exist, so they can't have a subscription.
+            $debug_code = 'Cannot find Stripe API key: ' . $e->getMessage();
+            CRM_Core_Error::debug_log_message($debug_code, $out = false);
+          }
+          if (!empty($subscription['data'][0]['id'])) {
+            $query_params = array(
+              1 => array($subscription['data'][0]['id'], 'String'),
+              2 => array($customer_id, 'String'),
+            );
+            CRM_Core_DAO::executeQuery('UPDATE civicrm_stripe_subscriptions SET subscription_id = %1 where customer_id = %2;', $query_params);
+            unset($subscription);
           }
       }
     }
@@ -257,22 +260,24 @@ class CRM_Stripe_Upgrader extends CRM_Stripe_Upgrader_Base {
         $test_mode = (int)!$subscriptions->is_live;
         try {
           // Fetch the recurring contribution Id. 
-           $recur_id = civicrm_api3('Contribution', 'getvalue', array(
-           'sequential' => 1,
-           'return' => "contribution_recur_id",
-           'invoice_id' => $subscriptions->invoice_id,
-           'contribution_test' => $test_mode,
+          $recur_id = civicrm_api3('Contribution', 'getvalue', array(
+            'sequential' => 1,
+            'return' => "contribution_recur_id",
+            'invoice_id' => $subscriptions->invoice_id,
+            'contribution_test' => $test_mode,
           ));
-          if (!empty($recur_id)) {
-             $p = array(
-              1 => array($recur_id, 'Integer'),
-              2 => array($subscriptions->invoice_id, 'String'),
-            );
-            CRM_Core_DAO::executeQuery('UPDATE civicrm_stripe_subscriptions SET contribution_recur_id = %1 WHERE invoice_id = %2;', $p);
-          }
         } 
-          catch (CiviCRM_API3_Exception $e) {
-            return;
+        catch (CiviCRM_API3_Exception $e) {
+          // Don't quit here. If we can't find the recurring ID for a single customer, make a note in the error log and carry on.
+          $debug_code = 'Recurring contribution search: ' . $e->getMessage();
+          CRM_Core_Error::debug_log_message($debug_code, $out = false);
+        }
+        if (!empty($recur_id)) {
+          $p = array(
+            1 => array($recur_id, 'Integer'),
+            2 => array($subscriptions->invoice_id, 'String'),
+          );
+          CRM_Core_DAO::executeQuery('UPDATE civicrm_stripe_subscriptions SET contribution_recur_id = %1 WHERE invoice_id = %2;', $p);
         }
       }
         return TRUE;

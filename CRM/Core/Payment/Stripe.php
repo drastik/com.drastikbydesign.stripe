@@ -282,7 +282,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
    * contain a Stripe payment processor, return the api public key for
    * that processor.
    */
-  public function stripe_get_key($form) {
+  public static function stripe_get_key($form) {
     if (empty($form->_paymentProcessor)) {
       return;
     }

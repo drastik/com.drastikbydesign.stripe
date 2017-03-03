@@ -183,3 +183,21 @@ function stripe_civicrm_managed(&$entities) {
       }
     }
   }
+
+  /**
+   * Implementation of hook_civicrm_alterContent
+   *
+   * @return void
+   */
+  function stripe_civicrm_alterContent( &$content, $context, $tplName, &$object ) {
+    if($context == 'form' && !empty($object->_paymentProcessor['class_name'])) {
+      if($object->_paymentProcessor['class_name'] == 'Payment_Stripe') {
+        $stripe_key = CRM_Core_Payment_Stripe::stripe_get_key($object);
+        if(empty($stripe_key)) {
+        return;
+        }
+        $stripeJSURL = CRM_Core_Resources::singleton()->getUrl('com.drastikbydesign.stripe', 'js/civicrm_stripe.js');
+        $content .= "<script src='{$stripeJSURL}'></script>";
+      }
+    }
+  }

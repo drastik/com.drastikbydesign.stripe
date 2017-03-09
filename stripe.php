@@ -170,32 +170,34 @@ function stripe_civicrm_managed(&$entities) {
       return;
     }
     // If Stripe is active here.
-    if (isset($form->_elementIndex['stripe_token'])) {
-      if ($form->elementExists('credit_card_number')) {
-        $cc_field = $form->getElement('credit_card_number');
-        $form->removeElement('credit_card_number', true);
-        $form->addElement($cc_field);
+    if ($form->_paymentProcessor['class_name'] == 'Payment_Stripe') {
+      if (isset($form->_elementIndex['stripe_token'])) {
+        if ($form->elementExists('credit_card_number')) {
+          $cc_field = $form->getElement('credit_card_number');
+          $form->removeElement('credit_card_number', true);
+          $form->addElement($cc_field);
+        }
+        if ($form->elementExists('cvv2')) {
+          $cvv2_field = $form->getElement('cvv2');
+          $form->removeElement('cvv2', true);
+          $form->addElement($cvv2_field);
+        }
       }
-      if ($form->elementExists('cvv2')) {
-        $cvv2_field = $form->getElement('cvv2');
-        $form->removeElement('cvv2', true);
-        $form->addElement($cvv2_field);
-      }
+    } else {
+      return;
     }
   }
 
   /**
    * Implementation of hook_civicrm_alterContent
    *
+   * Adding civicrm_stripe.js in a way that works for webforms and Civi forms.
+   *
    * @return void
    */
   function stripe_civicrm_alterContent( &$content, $context, $tplName, &$object ) {
     if($context == 'form' && !empty($object->_paymentProcessor['class_name'])) {
       if($object->_paymentProcessor['class_name'] == 'Payment_Stripe') {
-        $stripe_key = CRM_Core_Payment_Stripe::stripe_get_key($object);
-        if(empty($stripe_key)) {
-        return;
-        }
         $stripeJSURL = CRM_Core_Resources::singleton()->getUrl('com.drastikbydesign.stripe', 'js/civicrm_stripe.js');
         $content .= "<script src='{$stripeJSURL}'></script>";
       }

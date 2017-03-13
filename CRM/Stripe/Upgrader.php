@@ -342,4 +342,29 @@ class CRM_Stripe_Upgrader extends CRM_Stripe_Upgrader_Base {
        return TRUE;
   }
 */
+
+ /**
+   * Add change default NOT NULL to NULL in vestigial invoice_id column in civicrm_stripe_subscriptions table if needed. (issue #191)
+   *
+   * @return TRUE on success
+   * @throws Exception
+   */
+  public function upgrade_5008() {
+    $config = CRM_Core_Config::singleton();
+    $dbName = DB::connect($config->dsn)->_db;
+
+    $sql = "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = %1 AND TABLE_NAME = 'civicrm_stripe_subscriptions' AND COLUMN_NAME = 'invoice_id'";
+    $dao = CRM_Core_DAO::executeQuery($sql, array(1 => array($dbName, 'String')));
+
+    if (!$dao->N) {
+      $this->ctx->log->info('Skipped civicrm_stripe update 5008. Column not present.');
+    }
+    else {
+      $this->ctx->log->info('Applying civicrm_stripe update 5008. Altering invoice_id to be default NULL.');
+      CRM_Core_DAO::executeQuery('ALTER TABLE `civicrm_stripe_subscriptions`
+        MODIFY COLUMN `invoice_id` varchar(255) NULL default ""
+        COMMENT "Safe to remove this column if the update retrieving subscription IDs completed satisfactorily."');
+    }
+      return TRUE;
+  }
 }

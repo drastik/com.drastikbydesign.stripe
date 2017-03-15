@@ -45,18 +45,6 @@ class CRM_Stripe_Upgrader extends CRM_Stripe_Upgrader_Base {
     else {
       $this->ctx->log->info('Skipped civicrm_stripe update 1903.  Column is_live already present on civicrm_stripe_plans table.');
     }
-
-    $sql = "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = %1 AND TABLE_NAME = 'civicrm_stripe_customers' AND COLUMN_KEY = 'MUL'";
-    $dao = CRM_Core_DAO::executeQuery($sql, array(1 => array($dbName, 'String')));
-    $key_column_exists = $dao->N == 0 ? FALSE : TRUE;
-    if ($key_column_exists) {
-      $this->ctx->log->info('Applying civicrm_stripe update 1903.  Setting unique key from email to id on civicrm_stripe_plans table.');
-      CRM_Core_DAO::executeQuery('ALTER TABLE `civicrm_stripe_customers` DROP INDEX email');
-      CRM_Core_DAO::executeQuery('ALTER TABLE `civicrm_stripe_customers` ADD UNIQUE (id)');
-    }
-    else {
-      $this->ctx->log->info('Skipped civicrm_stripe update 1903.  Unique key already changed from email to id on civicrm_stripe_plans table.');
-    }
     return TRUE;
   }
 
@@ -344,7 +332,7 @@ class CRM_Stripe_Upgrader extends CRM_Stripe_Upgrader_Base {
 */
 
  /**
-   * Add change default NOT NULL to NULL in vestigial invoice_id column in civicrm_stripe_subscriptions table if needed. (issue #191)
+   * Add change default NOT NULL to NULL in vestigial invoice_id column in civicrm_stripe_subscriptions table if needed. (issue #192)
    *
    * @return TRUE on success
    * @throws Exception
@@ -366,5 +354,32 @@ class CRM_Stripe_Upgrader extends CRM_Stripe_Upgrader_Base {
         COMMENT "Safe to remove this column if the update retrieving subscription IDs completed satisfactorily."');
     }
       return TRUE;
+  }
+
+  /**
+   * Add remove unique from email and add to customer in civicrm_stripe_customers tables. (issue #191)
+   *
+   * @return TRUE on success
+   * @throws Exception
+   */
+  public function upgrade_5009() {
+    $config = CRM_Core_Config::singleton();
+    $dbName = DB::connect($config->dsn)->_db;
+
+    $sql = "SELECT COLUMN_NAME FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = %1
+      AND TABLE_NAME = 'civicrm_stripe_customers'
+      AND COLUMN_NAME = 'id'
+      AND COLUMN_KEY = 'UNI'";
+    $dao = CRM_Core_DAO::executeQuery($sql, array(1 => array($dbName, 'String')));
+    if ($dao->N) {
+      $this->ctx->log->info('id is already unique in civicrm_stripe_customers table, no need for civicrm_stripe update 5009.');
+    }
+    else {
+      $this->ctx->log->info('Applying civicrm_stripe update 5009.  Setting unique key from email to id on civicrm_stripe_plans table.');
+      CRM_Core_DAO::executeQuery('ALTER TABLE `civicrm_stripe_customers` DROP INDEX email');
+      CRM_Core_DAO::executeQuery('ALTER TABLE `civicrm_stripe_customers` ADD UNIQUE (id)');
+    }
+    return TRUE;
   }
 }

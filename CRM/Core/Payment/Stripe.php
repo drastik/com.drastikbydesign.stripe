@@ -279,7 +279,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     }
     // Determine if we are dealing with a webform in CiviCRM 4.7.  Those don't have a
     //  _paymentProcessors array and only have one payprocesssor.
-    if (get_class($form) == 'CRM_Financial_Form_Payment') {
+    if (in_array(get_class($form), array('CRM_Financial_Form_Payment', 'CRM_Contribute_Form_Contribution'))) {
       return $stripe_ppid = $form->_paymentProcessor['id'];
     }
     else {

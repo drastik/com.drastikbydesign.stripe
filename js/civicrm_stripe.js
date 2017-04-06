@@ -44,15 +44,18 @@
       Stripe.setPublishableKey($('#stripe-pub-key').val());
     });
 
-    if ($('.webform-client-form').length) {
-      isWebform = true;
-      $('form.webform-client-form').addClass('stripe-payment-form');
-    }
-    else {
-      if (!($('.stripe-payment-form').length)) {
-        $('#crm-container > form').addClass('stripe-payment-form');
+    // Check for form marked as a stripe-payment-form by the server.
+    if (!($('form.stripe-payment-form').length)) {
+      // If there isn't one look for it.
+      if ($('.webform-client-form').length) {
+        isWebform = true;
+        $('form.webform-client-form').addClass('stripe-payment-form');
+      }
+      else {
+	      $('#crm-container > form').addClass('stripe-payment-form');
       }
     }
+
     $form   = $('form.stripe-payment-form');
     if (isWebform) {
       $submit = $form.find('.button-primary');

@@ -50,7 +50,7 @@
     }
     else {
       if (!($('.stripe-payment-form').length)) {
-        $('#crm-container > form').addClass('stripe-payment-form');
+        $('#crm-main-content-wrapper form').addClass('stripe-payment-form');
       }
     }
     $form   = $('form.stripe-payment-form');

@@ -284,13 +284,10 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     }
     else {
       // Find a Stripe pay processor ascociated with this Civi form and find the ID.
-   //   $payProcessors = $form->_paymentProcessors;
-      $payProcessors = CRM_Core_Form_Stripe::get_ppids($form);
-      foreach ($payProcessors as $payProcessor) {
-        if ($payProcessor['class_name'] == 'Payment_Stripe') {
-          return $stripe_ppid = $payProcessor['id'];
-          break;
-        }
+      $stripePayProcessors = CRM_Core_Form_Stripe::get_stripe_ppids($form);
+      if (count($stripePayProcessors) > 0) {
+        // Return the first one.
+        return $stripePayProcessors[0];
       }
     }
     // None of the payprocessors are Stripe.

@@ -237,7 +237,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
    * @param $form - reference to the form object
    */
   public function buildForm(&$form) {
-    $stripe_ppid = self::get_stripe_ppid($form);
+    $stripe_ppid = $this->get_stripe_ppid($form);
 
     // Add the ID to our form so our js can tell if Stripe has been selected.
     $form->addElement('hidden', 'stripe_id', $stripe_ppid, array('id' => 'stripe-id'));
@@ -273,7 +273,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     }
   }
 
- public static function get_stripe_ppid($form) {
+ public function get_stripe_ppid($form) {
     if (empty($form->_paymentProcessor)) {
       return;
     }
@@ -284,7 +284,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     }
     else {
       // Find a Stripe pay processor ascociated with this Civi form and find the ID.
-      $stripePayProcessors = CRM_Core_Form_Stripe::get_stripe_ppids($form);
+      $stripePayProcessors = CRM_Core_Form_Stripe::get_stripe_ppids($form, $this->_islive);
       if (count($stripePayProcessors) > 0) {
         // Return the first one.
         return $stripePayProcessors[0];

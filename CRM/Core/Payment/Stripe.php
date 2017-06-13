@@ -282,6 +282,9 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     if (in_array(get_class($form), array('CRM_Financial_Form_Payment', 'CRM_Contribute_Form_Contribution'))) {
       return $stripe_ppid = $form->_paymentProcessor['id'];
     }
+    elseif (!empty($form->_paymentProcessorID)) {
+      return $form->_paymentProcessorID;
+    }
     else {
       // Find a Stripe pay processor ascociated with this Civi form and find the ID.
       $stripePayProcessors = CRM_Core_Form_Stripe::get_stripe_ppids($form, $this->_islive);

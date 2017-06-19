@@ -243,7 +243,17 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     $form->addElement('hidden', 'stripe_id', $stripe_ppid, array('id' => 'stripe-id'));
 
     $stripe_key = self::stripe_get_key($stripe_ppid);
-    $form->addElement('hidden', 'stripe_pub_key', $stripe_key, array('id' => 'stripe-pub-key'));
+    if (get_class($form) == 'CRM_Financial_Form_Payment') {
+      // This means the user has selected a different payment processor to
+      // an existing form. Don't add a second stripe-pub-key - instead add a
+      // new one that overrides the first
+      $form->addElement('hidden', 'stripe_pub_key_updated', $stripe_key, array('id' => 'stripe-pub-key-updated'));
+      CRM_Core_Error::debug_log_message("Updating public key: $stripe_key");
+    }
+    else {
+      $form->addElement('hidden', 'stripe_pub_key', $stripe_key, array('id' => 'stripe-pub-key'));
+      CRM_Core_Error::debug_log_message("Adding public key: $stripe_key");
+    }
 
     $params = $form->get('params');
     // Contrib forms store this in $params, Event forms in $params[0].

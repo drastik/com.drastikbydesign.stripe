@@ -210,6 +210,13 @@
         var cc_month = $form.find('#credit_card_exp_date\\[M\\]').val();
         var cc_year = $form.find('#credit_card_exp_date\\[Y\\]').val();
       }
+      // Check for an updated Stripe public key (if the user chose a different
+      // Stripe payment processor).
+
+      if ($('#stripe-pub-key-updated').length && $('#stripe-pub-key-updated').val() != $('#stripe-pub-key').val() ) {
+        Stripe.setPublishableKey($('#stripe-pub-key-updated').val());
+      }
+
       Stripe.card.createToken({
         name:        $form.find('#billing_first_name').val() + ' ' + $form.find('#billing_last_name').val(),
         address_zip: $form.find('#billing_postal_code-5').val(),

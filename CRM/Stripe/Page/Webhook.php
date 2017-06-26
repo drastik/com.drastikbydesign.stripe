@@ -7,7 +7,7 @@
 require_once 'CRM/Core/Page.php';
 
 class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
-  function run() {
+  function run($data = null) {
     function getRecurInfo($subscription_id,$test_mode) {
 
         $query_params = array(
@@ -76,8 +76,11 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
         return $recurring_info;
     }
     // Get the data from Stripe.
-    $data_raw = file_get_contents("php://input");
-    $data = json_decode($data_raw);
+
+    if (is_null($data)) {
+      $data_raw = file_get_contents("php://input");
+      $data = json_decode($data_raw);
+    }
     if (!$data) {
       header('HTTP/1.1 406 Not acceptable');
       CRM_Core_Error::Fatal("Stripe Callback: cannot json_decode data, exiting. <br /> $data");
@@ -118,7 +121,9 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
     // Retrieve Event from Stripe using ID even though we already have the values now.
     // This is for extra security precautions mentioned here: https://stripe.com/docs/webhooks
     $stripe_event_data = \Stripe\Event::retrieve($data->id);
+
     $customer_id = $stripe_event_data->data->object->customer;
+
 
     switch($stripe_event_data->type) {
       // Successful recurring payment.

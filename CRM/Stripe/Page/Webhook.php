@@ -7,7 +7,6 @@
 require_once 'CRM/Core/Page.php';
 
 class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
-  function run() {
     function getRecurInfo($subscription_id,$test_mode) {
 
         $query_params = array(
@@ -75,9 +74,19 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
 
         return $recurring_info;
     }
+
+    function run($data = null) {
     // Get the data from Stripe.
-    $data_raw = file_get_contents("php://input");
-    $data = json_decode($data_raw);
+    $is_email_receipt = 1;
+    // Don't send emails while running php unit tests.
+    if (defined('STRIPE_PHPUNIT_TEST')) {
+      $is_email_receipt = 0;
+    }
+
+    if (is_null($data)) {
+      $data_raw = file_get_contents("php://input");
+      $data = json_decode($data_raw);
+    }
     if (!$data) {
       header('HTTP/1.1 406 Not acceptable');
       CRM_Core_Error::Fatal("Stripe Callback: cannot json_decode data, exiting. <br /> $data");
@@ -90,13 +99,15 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
     $processorId = CRM_Utils_Request::retrieve('ppid', 'Integer');
     try {
       if (empty($processorId)) {
-        $stripe_key = civicrm_api3('PaymentProcessor', 'getvalue', array(
-          'return' => 'user_name',
+        $processor_result = civicrm_api3('PaymentProcessor', 'get', array(
+          'return' => array('user_name', 'id'),
           'payment_processor_type_id' => 'Stripe',
           'is_test' => $test_mode,
           'is_active' => 1,
           'options' => array('limit' => 1),
         ));
+        $processorId = $processor_result['id'];
+        $stripe_key = $processor_result['values'][$processorId]['user_name'];
       }
       else {
         $stripe_key = civicrm_api3('PaymentProcessor', 'getvalue', array(
@@ -115,9 +126,18 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
     \Stripe\Stripe::setAppInfo('CiviCRM', CRM_Utils_System::version(), CRM_Utils_System::baseURL());
     \Stripe\Stripe::setApiKey($stripe_key);
 
-    // Retrieve Event from Stripe using ID even though we already have the values now.
-    // This is for extra security precautions mentioned here: https://stripe.com/docs/webhooks
-    $stripe_event_data = \Stripe\Event::retrieve($data->id);
+    if (defined('STRIPE_PHPUNIT_TEST') && $data->type == 'invoice.payment_failed') {
+      // It's impossible to fake a failed payment on a recurring
+      // contribution in an automated way, so we are faking it in
+      // unit test.
+      $stripe_event_data = $data;
+    }
+    else {
+      // Retrieve Event from Stripe using ID even though we already have the values now.
+      // This is for extra security precautions mentioned here: https://stripe.com/docs/webhooks
+      $stripe_event_data = \Stripe\Event::retrieve($data->id);
+    }
+
     $customer_id = $stripe_event_data->data->object->customer;
 
     switch($stripe_event_data->type) {
@@ -149,7 +169,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
         }
 
         // First, get the recurring contribution id and previous contribution id.
-        $recurring_info = getRecurInfo($subscription_id,$test_mode);
+        $recurring_info = self::getRecurInfo($subscription_id,$test_mode);
 
         // Fetch the previous contribution's status.
         $previous_contribution = civicrm_api3('Contribution', 'get', array(
@@ -192,8 +212,9 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
             'trxn_id' => $charge_id,
             'total_amount' => $amount,
             'fee_amount' => $fee,
+            'payment_processor_id' => $processorId,
+            'is_email_receipt' => $is_email_receipt,
            ));
-
           return;
 
 	 } else {
@@ -215,9 +236,8 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
  	   'total_amount' => $amount,
 	   'fee_amount' => $fee,
 	  //'invoice_id' => $new_invoice_id - contribution.repeattransaction doesn't support it currently
-	   'is_email_receipt' => 1,
-         ));
-
+	   'is_email_receipt' => $is_email_receipt,
+         ));  
         // Update invoice_id manually. repeattransaction doesn't return the new contrib id either, so we update the db.
         $query_params = array(
           1 => array($new_invoice_id, 'String'),
@@ -264,9 +284,9 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
         $transaction_id = $charge->id;
 
         // First, get the recurring contribution id and previous contribution id.
-        $recurring_info = getRecurInfo($subscription_id,$test_mode);
-
-        // Fetch the previous contribution's status.
+        $recurring_info = self::getRecurInfo($subscription_id,$test_mode);
+  
+        // Fetch the previous contribution's status. 
         $previous_contribution_status = civicrm_api3('Contribution', 'getvalue', array(
           'sequential' => 1,
           'return' => "contribution_status_id",
@@ -284,7 +304,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
             'financial_type_id' => $recurring_info->financial_type_id,
             'receive_date' => $fail_date,
             'total_amount' => $amount,
-	    'is_email_receipt' => 1,
+	    'is_email_receipt' => $is_email_receipt,
 	    'is_test' => $test_mode,
           ));
 
@@ -299,7 +319,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
             'financial_type_id' => $recurring_info->financial_type_id,
             'receive_date' => $fail_date,
             'total_amount' => $amount,
-	    'is_email_receipt' => 1,
+	    'is_email_receipt' => $is_email_receipt,
 	    'is_test' => $test_mode,
           ));
          }
@@ -329,7 +349,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
         $subscription_id = $stripe_event_data->data->object->id;
 
         // First, get the recurring contribution id and previous contribution id.
-        $recurring_info = getRecurInfo($subscription_id,$test_mode);
+        $recurring_info = self::getRecurInfo($subscription_id,$test_mode);
 
         //Cancel the recurring contribution
         $result = civicrm_api3('ContributionRecur', 'cancel', array(
@@ -372,8 +392,8 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
          $new_civi_invoice = md5(uniqid(rand(), TRUE));
 
          // First, get the recurring contribution id and previous contribution id.
-         $recurring_info = getRecurInfo($subscription_id,$test_mode);
-
+         $recurring_info = self::getRecurInfo($subscription_id,$test_mode);
+         
          // Is there a pending charge due to a subcription change?  Make up your mind!!
          $previous_contribution = civicrm_api3('Contribution', 'get', array(
           'sequential' => 1,
@@ -486,7 +506,6 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
 
     }
 
-    parent::run();
   }
 
 }

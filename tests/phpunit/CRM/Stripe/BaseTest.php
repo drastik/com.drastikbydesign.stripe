@@ -49,6 +49,7 @@ class CRM_Stripe_BaseTest extends \PHPUnit_Framework_TestCase implements Headles
 
   public function setUp() {
     parent::setUp();
+    require_once('stripe-php/init.php');
  		$this->createPaymentProcessor();
  		$this->createContact();
     $this->createContributionPage();
@@ -170,7 +171,6 @@ class CRM_Stripe_BaseTest extends \PHPUnit_Framework_TestCase implements Headles
   public function assertValidTrxn() {
     $this->assertNotEmpty($this->_trxn_id, "A trxn id was assigned");
 
-    require_once('stripe-php/init.php');
     \Stripe\Stripe::setApiKey($this->_sk);
     $found = FALSE;
     try {

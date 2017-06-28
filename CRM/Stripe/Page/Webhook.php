@@ -499,7 +499,6 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
 
     }
 
-    parent::run();
   }
 
 }

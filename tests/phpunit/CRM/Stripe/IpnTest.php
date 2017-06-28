@@ -59,7 +59,6 @@ class CRM_Stripe_IpnTest extends CRM_Stripe_BaseTest {
     // Now check to see if an event was triggered and if so, process it.
     // Get all events of the type invoice.payment_succeeded that have 
     // happened since this code was invoked.
-		$params['sk'] = $this->_sk;
 		$params['created'] = array('gte' => $this->_created_ts);
     $params['type'] = 'invoice.payment_succeeded';
 

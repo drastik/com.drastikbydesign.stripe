@@ -76,6 +76,11 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
         return $recurring_info;
     }
     // Get the data from Stripe.
+    $is_email_receipt = 1;
+    // Don't send emails while running php unit tests.
+    if (defined('STRIPE_PHPUNIT_TEST')) {
+      $is_email_receipt = 0;
+    }
 
     if (is_null($data)) {
       $data_raw = file_get_contents("php://input");
@@ -93,13 +98,15 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
     $processorId = CRM_Utils_Request::retrieve('ppid', 'Integer');
     try {
       if (empty($processorId)) {
-        $stripe_key = civicrm_api3('PaymentProcessor', 'getvalue', array(
-          'return' => 'user_name',
+        $processor_result = civicrm_api3('PaymentProcessor', 'get', array(
+          'return' => array('user_name', 'id'),
           'payment_processor_type_id' => 'Stripe',
           'is_test' => $test_mode,
           'is_active' => 1,
           'options' => array('limit' => 1),
         ));
+        $processorId = $processor_result['id'];
+        $stripe_key = $processor_result['values'][$processorId]['user_name'];
       }
       else {
         $stripe_key = civicrm_api3('PaymentProcessor', 'getvalue', array(
@@ -196,8 +203,9 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
             'trxn_id' => $charge_id,
             'total_amount' => $amount,
             'fee_amount' => $fee,
+            'payment_processor_id' => $processorId,
+            'is_email_receipt' => $is_email_receipt,
            ));
-
           return;
 
 	 } else {
@@ -219,7 +227,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
  	   'total_amount' => $amount,
 	   'fee_amount' => $fee,
 	  //'invoice_id' => $new_invoice_id - contribution.repeattransaction doesn't support it currently
-	   'is_email_receipt' => 1,
+	   'is_email_receipt' => $is_email_receipt,
          ));  
  
         // Update invoice_id manually. repeattransaction doesn't return the new contrib id either, so we update the db.
@@ -288,7 +296,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
             'financial_type_id' => $recurring_info->financial_type_id,
             'receive_date' => $fail_date,
             'total_amount' => $amount,
-	    'is_email_receipt' => 1,
+	    'is_email_receipt' => $is_email_receipt,
 	    'is_test' => $test_mode,
           ));  
 
@@ -303,7 +311,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
             'financial_type_id' => $recurring_info->financial_type_id,
             'receive_date' => $fail_date,
             'total_amount' => $amount,
-	    'is_email_receipt' => 1,
+	    'is_email_receipt' => $is_email_receipt,
 	    'is_test' => $test_mode,
           ));  
          }

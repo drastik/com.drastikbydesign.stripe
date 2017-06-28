@@ -203,6 +203,9 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       $body = $e->getJsonBody();
       $err = $body['error'];
 
+      if (!array_key_exists('code', $err)) {
+        $err['code'] = null;
+      }
       //$error_message .= 'Status is: ' . $e->getHttpStatus() . "<br />";
       ////$error_message .= 'Param is: ' . $err['param'] . "<br />";
       $error_message .= 'Type: ' . $err['type'] . "<br />";

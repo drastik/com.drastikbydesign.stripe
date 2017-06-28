@@ -74,14 +74,40 @@ class CRM_Stripe_IpnTest extends CRM_Stripe_BaseTest {
       }
     }
 
-    $contribution_status_id = NULL;
     if ($payment_object) {
       $stripe = new CRM_Stripe_Page_Webhook();
       $stripe->run($payment_object);
-      $contribution = civicrm_api3('contribution', 'getsingle', array('id' => $this->_contributionID));
-      $contribution_status_id = $contribution['contribution_status_id'];
     }
+    $contribution = civicrm_api3('contribution', 'getsingle', array('id' => $this->_contributionID));
+    $contribution_status_id = $contribution['contribution_status_id'];
     $this->assertEquals(1, $contribution_status_id, "Recurring payment was properly processed via a stripe event.");
+
+    // Now, cancel the subscription and ensure it is properly cancelled.
+    \Stripe\Stripe::setApiKey($this->_sk);
+    $sub = \Stripe\Subscription::retrieve($this->_subscriptionID);
+    $sub->cancel();
+
+    $params['sk'] = $this->_sk;
+		$params['created'] = array('gte' => $this->_created_ts);
+    $params['type'] = 'customer.subscription.deleted';
+
+		// Now try to retrieve this transaction.
+		$transactions = civicrm_api3('Stripe', 'listevents', $params );		
+    $sub_object = NULL;
+    foreach($transactions['values']['data'] as $transaction) {
+      if ($transaction->data->object->id == $this->_subscriptionID) {
+        $sub_object = $transaction;
+        break;
+      }
+    }
+    if ($sub_object) {
+      $stripe = new CRM_Stripe_Page_Webhook();
+      $stripe->run($sub_object);
+    }
+    $contribution_recur = civicrm_api3('contributionrecur', 'getsingle', array('id' => $this->_contributionRecurID));
+    $contribution_recur_status_id = $contribution_recur['contribution_status_id'];
+    $status = CRM_Contribute_PseudoConstant::contributionStatus($contribution_recur_status_id, 'name');
+    $this->assertEquals('Cancelled', $status, "Recurring payment was properly cancelled via a stripe event.");
   }
 
   /**

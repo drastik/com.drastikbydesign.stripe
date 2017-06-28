@@ -33,11 +33,8 @@ class CRM_Stripe_BaseTest extends \PHPUnit_Framework_TestCase implements Headles
 	protected $_created_ts;
   protected $_subscriptionID;
 	// Secret/public keys are PTP test keys.
-	// protected $_sk = 'sk_test_TlGdeoi8e1EOPC3nvcJ4q5UZ';
-	// protected $_pk = 'pk_test_k2hELLGpBLsOJr6jZ2z9RaYh';
-  // MFPL Secret key
-  protected $_sk = 'sk_test_0f3Nja19AQvQvLczwI5lV021';
-  protected $_pk = 'pk_test_4Q4VmBJAjn93vENmkka8YWSD';
+	protected $_sk = 'sk_test_TlGdeoi8e1EOPC3nvcJ4q5UZ';
+	protected $_pk = 'pk_test_k2hELLGpBLsOJr6jZ2z9RaYh';
 
   public function setUpHeadless() {
     // Civi\Test has many helpers, like install(), uninstall(), sql(), and sqlFile().

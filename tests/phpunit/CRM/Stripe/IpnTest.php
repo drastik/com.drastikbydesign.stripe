@@ -61,6 +61,7 @@ class CRM_Stripe_IpnTest extends CRM_Stripe_BaseTest {
     // happened since this code was invoked.
 		$params['created'] = array('gte' => $this->_created_ts);
     $params['type'] = 'invoice.payment_succeeded';
+    $params['ppid'] = $this->_paymentProcessorID;
 
 		// Now try to retrieve this transaction.
 		$transactions = civicrm_api3('Stripe', 'listevents', $params );		

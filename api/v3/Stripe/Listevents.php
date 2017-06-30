@@ -143,7 +143,7 @@ function civicrm_api3_stripe_ProcessParams($params) {
 
   // Select the right payment processor to use.
   if ($ppid) {
-    $query_params = array('id' => $$id);
+    $query_params = array('id' => $ppid);
   }
   else {
     // By default, select the live stripe processor (we expect there to be
@@ -151,16 +151,16 @@ function civicrm_api3_stripe_ProcessParams($params) {
     $query_params = array('class_name' => 'Payment_Stripe', 'is_test' => 0);
   }
   try {
-    $results = civicrm_api3('PaymentProcessor', 'getsingle', $params);
+    $results = civicrm_api3('PaymentProcessor', 'getsingle', $query_params);
     // YES! I know, password and user are backwards. wtf??
     $sk = $results['user_name'];
   }
   catch (CiviCRM_API3_Exception $e) {
     if(preg_match('/Expected one PaymentProcessor but/', $e->getMessage())) {
-      throw new API_Exception(/*errorMessage*/ "Expected one live Stripe payment processor, but found none or more than one. Please specify id= OR pk= and sk=.", /*errorCode*/ 1234);
+      throw new API_Exception("Expected one live Stripe payment processor, but found none or more than one. Please specify ppid=.", 1234);
     }
     else {
-      throw new API_Exception(/*errorMessage*/ "Error getting the Stripe Payment Processor to use", /*errorCode*/ 1235);
+      throw new API_Exception("Error getting the Stripe Payment Processor to use", 1235);
     }
   }
 
@@ -168,7 +168,7 @@ function civicrm_api3_stripe_ProcessParams($params) {
   if (array_key_exists('type', $params) ) {
     // Validate - since we will be appending this to an URL.
     if (!civicrm_api3_stripe_VerifyEventType($params['type'])) {
-      throw new API_Exception(/*errorMessage*/ "Unrecognized Event Type.", /*errorCode*/ 1236);
+      throw new API_Exception("Unrecognized Event Type.", 1236);
     }
     else {
       $type = $params['type'];
@@ -179,7 +179,7 @@ function civicrm_api3_stripe_ProcessParams($params) {
   if (array_key_exists('created', $params)) {
     $created = $params['created'];
     if (!is_array($created)) {
-      throw new API_Exception(/*errorMessage*/ "Created can only be passed in programatically as an array", /*errorCode*/ 1237);
+      throw new API_Exception("Created can only be passed in programatically as an array", 1237);
     }
   }
   return array('sk' => $sk, 'type' => $type, 'created' => $created, 'limit' => $limit, 'starting_after' => $starting_after);

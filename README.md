@@ -60,6 +60,18 @@ The api commands are:
   * evtid - The Event ID as provided by Stripe.
   * ppid - Use the given Payment Processor ID. By default, uses the saved, live Stripe payment processor and throws an error if there is more than one.
 
+TESTS
+------------
+This extension comes with two PHP Unit tests:
+
+ * Ipn - This unit test ensures that a recurring contribution is properly updated after the event is received from Stripe and that it is properly canceled when cancelled via Stripe.
+ * Direct - This unit test ensures that a direct payment to Stripe is properly recorded in the database. 
+
+Tests can be run most easily via an installation made through CiviCRM Buildkit (https://github.com/civicrm/civicrm-buildkit) by running:
+
+    phpunit4 tests/phpunit/CRM/Stripe/IpnTest.php 
+    phpunit4 tests/phpunit/CRM/Stripe/DirectTest.php 
+
 GOOD TO KNOW
 ------------
 * The stripe-php package has been added to this project & no longer needs to be  

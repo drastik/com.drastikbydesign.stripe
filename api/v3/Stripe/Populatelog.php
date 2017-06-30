@@ -77,6 +77,10 @@ function civicrm_api3_stripe_Populatelog($params) {
     $dao= CRM_Core_DAO::executeQuery($sql);
     if ($dao->N == 0) {
       $message = "payment_notification processor_id=${ppid} event_id=${id}";
+      $contact_id = civicrm_api3_stripe_cid_for_trxn($item->data->object->charge);
+      if ($contact_id) {
+        $item['contact_id'] = $contact_id;
+      }
       $log = new CRM_Utils_SystemLogger();
       $log->alert($message, $item);
       $results[] = $id;
@@ -84,4 +88,10 @@ function civicrm_api3_stripe_Populatelog($params) {
   }
   return civicrm_api3_create_success($results);
 
+}
+
+function civcrm_api3_stripe_cid_for_trxn($trxn) {
+  $params = array('trxn_id' => $trxn, 'return' => 'contact_id');
+  $result = civicrm_api3('Contribution', 'getvalue', $params);
+  return $result;
 }

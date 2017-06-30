@@ -85,27 +85,14 @@ class CRM_Stripe_BaseTest extends \PHPUnit_Framework_TestCase implements Headles
    *
    */
   function createPaymentProcessor($params = array()) {
-    $params = array_merge(array(
-        'name' => 'Stripe',
-        'domain_id' => CRM_Core_Config::domainID(),
- 		    'payment_processor_type_id' => 'Stripe',
-		    'title' => 'Stripe',
-        'is_active' => 1,
-        'is_default' => 0,
-        'is_test' => 1,
-        'is_recur' => 1,
-		    'user_name' => $this->_sk,
-		    'password' => $this->_pk,
-		    'url_site' => 'https://api.stripe.com/v1',
-		    'url_recur' => 'https://api.stripe.com/v1',
-        'class_name' => 'Payment_Stripe',
-        'billing_mode' => 1
-      ), $params);
-    $result = civicrm_api3('PaymentProcessor', 'create', $params);
-		$this->assertEquals(0, $result['is_error']);
-    $this->_paymentProcessor = array_pop($result['values']); 
+    $result = civicrm_api3('Stripe', 'setuptest', $params);
+    $processor = array_pop($result['values']);
+    $this->_sk = $processor['user_name'];
+    $this->_pk = $processor['password'];
+    $this->_paymentProcessor = $processor; 
     $this->_paymentProcessorID = $result['id']; 
   }
+
   /**
    * Create a stripe contribution page.
    *

@@ -43,7 +43,7 @@ function civicrm_api3_stripe_Ipn($params) {
       throw new API_Exception('Failed to find that entry in the system log', 3234);
     }
     $object = json_decode($data['context']);
-    if (preg_match('/processor_id=([0-9]+)$/', $object['message']), $matches) {
+    if (preg_match('/processor_id=([0-9]+)$/', $object['message'], $matches)) {
       $ppid = $matches[1];
     }
     else {
@@ -52,14 +52,21 @@ function civicrm_api3_stripe_Ipn($params) {
   }
   elseif (array_key_exists('evtid', $params)) {
     if (!array_key_exists('ppid', $params)) {
-      throw new API_Exception('Please pass the payment processor id (ppid) if using evtid.', 3235);
+      throw new API_Exception('Please pass the payment processor id (ppid) if using evtid.', 3236);
     }
-    $object = new stdClass();
-    $object->id = $params['evtid'];
     $ppid = $params['ppid'];
+    $results = civicrm_api3('PaymentProcessor', 'getsingle', array('id' => $ppid));
+    // YES! I know, password and user are backwards. wtf??
+    $sk = $results['user_name'];
+
+    require_once ("packages/stripe-php/init.php");
+    \Stripe\Stripe::setApiKey($sk);
+    $object = \Stripe\Event::retrieve($params['evtid']);
   }
 
   $_REQUEST['ppid'] = $ppid;
   $stripe = new CRM_Stripe_Page_Webhook();
   $stripe->run($object);
+  return civicrm_api3_create_success(array());
+
 }

@@ -16,11 +16,11 @@
  * @see http://wiki.civicrm.org/confluence/display/CRMDOC/API+Architecture+Standards
  */
 function _civicrm_api3_stripe_ListEvents_spec(&$spec) {
-  $spec['ppid']['title'] = ts("Payment Processor ID to use");
+  $spec['ppid']['title'] = ts("Use the given Payment Processor ID");
   $spec['ppid']['type'] = CRM_Utils_Type::T_INT; 
-  $spec['type']['title'] = ts("The type of Stripe Events to limit to (default is all).");
-  $spec['limit']['title'] = ts("Limit results to a specific number. 100 is the max, 10 is default.");
-  $spec['starting_after']['title'] = ts("Only get events after this event id.");
+  $spec['type']['title'] = ts("Limit to the given Stripe events type");
+  $spec['limit']['title'] = ts("Limit number of results returned (100 is max)");
+  $spec['starting_after']['title'] = ts("Only return results after this event id.");
 }
 
 /**

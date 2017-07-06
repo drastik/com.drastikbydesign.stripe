@@ -75,8 +75,18 @@ class CRM_Stripe_IpnTest extends CRM_Stripe_BaseTest {
     }
 
     if ($payment_object) {
-      $stripe = new CRM_Stripe_Page_Webhook();
-      $stripe->run($payment_object);
+      if (class_exists('CRM_Core_Payment_StripeIPN')) {
+        // The $_GET['processor_id'] value is normally set by 
+        // CRM_Core_Payment::handlePaymentMethod
+        $_GET['processor_id'] = $this->_paymentProcessorID;
+        $ipnClass = new CRM_Core_Payment_StripeIPN($payment_object);
+        $ipnClass->main();
+      }
+      else {
+        // Deprecated method.
+        $stripe = new CRM_Stripe_Page_Webhook();
+        $stripe->run($payment_object);
+      }
     }
     $contribution = civicrm_api3('contribution', 'getsingle', array('id' => $this->_contributionID));
     $contribution_status_id = $contribution['contribution_status_id'];
@@ -101,8 +111,18 @@ class CRM_Stripe_IpnTest extends CRM_Stripe_BaseTest {
       }
     }
     if ($sub_object) {
-      $stripe = new CRM_Stripe_Page_Webhook();
-      $stripe->run($sub_object);
+      if (class_exists('CRM_Core_Payment_StripeIPN')) {
+        // The $_GET['processor_id'] value is normally set by 
+        // CRM_Core_Payment::handlePaymentMethod
+        $_GET['processor_id'] = $this->_paymentProcessorID;
+        $ipnClass = new CRM_Core_Payment_StripeIPN($sub_object);
+        $ipnClass->main();
+      }
+      else {
+        // Deprecated method.
+        $stripe = new CRM_Stripe_Page_Webhook();
+        $stripe->run($sub_object);
+      }
     }
     $contribution_recur = civicrm_api3('contributionrecur', 'getsingle', array('id' => $this->_contributionRecurID));
     $contribution_recur_status_id = $contribution_recur['contribution_status_id'];

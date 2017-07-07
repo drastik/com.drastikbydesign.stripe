@@ -35,6 +35,7 @@ class CRM_Stripe_BaseTest extends \PHPUnit_Framework_TestCase implements Headles
 	// Secret/public keys are PTP test keys.
 	protected $_sk = 'sk_test_TlGdeoi8e1EOPC3nvcJ4q5UZ';
 	protected $_pk = 'pk_test_k2hELLGpBLsOJr6jZ2z9RaYh';
+  protected $_cc = NULL; 
 
   public function setUpHeadless() {
     // Civi\Test has many helpers, like install(), uninstall(), sql(), and sqlFile().
@@ -51,6 +52,21 @@ class CRM_Stripe_BaseTest extends \PHPUnit_Framework_TestCase implements Headles
  		$this->createContact();
     $this->createContributionPage();
 		$this->_created_ts = time();
+    $this->set_cc();
+  }
+
+  /**
+   * Switch between test cc number that works and that fails
+   *
+   */
+  public function set_cc($type = 'works') {
+    // See https://stripe.com/docs/testing
+    if ($type == 'works') {
+      $this->_cc = '4111111111111111';
+    }
+    elseif ($type == 'fails') {
+      $this->_cc = '4000000000000002';
+    }
   }
 
   public function tearDown() {
@@ -124,7 +140,7 @@ class CRM_Stripe_BaseTest extends \PHPUnit_Framework_TestCase implements Headles
       'payment_processor_id' => $this->_paymentProcessorID,
       'amount' => $this->_total,
       'stripe_token' => array(
-        'number' => '4111111111111111',
+        'number' => $this->_cc,
         'exp_month' => '12',
         'exp_year' => date('Y') + 1,
         'cvc' => '123',

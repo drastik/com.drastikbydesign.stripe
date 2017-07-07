@@ -41,7 +41,70 @@ class CRM_Stripe_IpnTest extends CRM_Stripe_BaseTest {
   public function tearDown() {
     parent::tearDown();
   }
+  /**
+   * Test making a failed recurring contribution.
+   */
+  public function testIPNRecurFail() {
+    $this->setupRecurringTransaction();
+    $payment_extra_params = array(
+      'is_recur' => 1,
+      'contributionRecurID' => $this->_contributionRecurID,
+      'frequency_unit' => $this->_frequency_unit,
+      'frequency_interval' => $this->_frequency_interval,
+      'installments' => $this->_installments
+    );
+    // Note - this will succeed. It is very hard to test a failed transaction.
+    // We will manipulate the event to make it a failed transactin below.
+    $this->doPayment($payment_extra_params);
 
+    // Now check to see if an event was triggered and if so, process it.
+    // Get all events of the type invoice.payment_failed that have 
+    // happened since this code was invoked.
+		$params['created'] = array('gte' => $this->_created_ts);
+    $params['type'] = 'invoice.payment_succeeded';
+    $params['ppid'] = $this->_paymentProcessorID;
+
+		// Now try to retrieve this transaction.
+		$transactions = civicrm_api3('Stripe', 'listevents', $params );		
+    $payment_object = NULL;
+    foreach($transactions['values']['data'] as $transaction) {
+      if ($transaction->data->object->subscription == $this->_subscriptionID) {
+        // This is the one.
+        $payment_object = $transaction;
+        break;
+      }
+    }
+
+    if ($payment_object) {
+      // Now manipulate the transaction so it appears to be a failed one.
+      $payment_object->type = 'invoice.payment_failed';
+      if (class_exists('CRM_Core_Payment_StripeIPN')) {
+        // The $_GET['processor_id'] value is normally set by 
+        // CRM_Core_Payment::handlePaymentMethod
+        $_GET['processor_id'] = $this->_paymentProcessorID;
+        $ipnClass = new CRM_Core_Payment_StripeIPN($payment_object);
+        $ipnClass->main();
+      }
+      else {
+        // Deprecated method.
+        $stripe = new CRM_Stripe_Page_Webhook();
+        $stripe->run($payment_object);
+      }
+    }
+
+    $contribution = civicrm_api3('contribution', 'getsingle', array('id' => $this->_contributionID));
+    $contribution_status_id = $contribution['contribution_status_id'];
+
+    $status = CRM_Contribute_PseudoConstant::contributionStatus($contribution_status_id, 'name');
+    $this->assertEquals('Failed', $status, "Failed contribution was properly marked as failed via a stripe event.");
+    $failure_count = civicrm_api3('ContributionRecur', 'getvalue', array(
+      'sequential' => 1,
+      'id' => $this->_contributionRecurID,
+      'return' => 'failure_count',
+    ));
+    $this->assertEquals(1, $failure_count, "Failed contribution count is correct..");
+
+  }
   /**
    * Test making a recurring contribution.
    */

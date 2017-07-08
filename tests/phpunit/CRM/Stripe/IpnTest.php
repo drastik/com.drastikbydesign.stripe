@@ -58,38 +58,11 @@ class CRM_Stripe_IpnTest extends CRM_Stripe_BaseTest {
     $this->doPayment($payment_extra_params);
 
     // Now check to see if an event was triggered and if so, process it.
-    // Get all events of the type invoice.payment_failed that have 
-    // happened since this code was invoked.
-		$params['created'] = array('gte' => $this->_created_ts);
-    $params['type'] = 'invoice.payment_succeeded';
-    $params['ppid'] = $this->_paymentProcessorID;
-
-		// Now try to retrieve this transaction.
-		$transactions = civicrm_api3('Stripe', 'listevents', $params );		
-    $payment_object = NULL;
-    foreach($transactions['values']['data'] as $transaction) {
-      if ($transaction->data->object->subscription == $this->_subscriptionID) {
-        // This is the one.
-        $payment_object = $transaction;
-        break;
-      }
-    }
-
+    $payment_object = $this->getEvent('invoice.payment_succeeded'); 
     if ($payment_object) {
       // Now manipulate the transaction so it appears to be a failed one.
       $payment_object->type = 'invoice.payment_failed';
-      if (class_exists('CRM_Core_Payment_StripeIPN')) {
-        // The $_GET['processor_id'] value is normally set by 
-        // CRM_Core_Payment::handlePaymentMethod
-        $_GET['processor_id'] = $this->_paymentProcessorID;
-        $ipnClass = new CRM_Core_Payment_StripeIPN($payment_object);
-        $ipnClass->main();
-      }
-      else {
-        // Deprecated method.
-        $stripe = new CRM_Stripe_Page_Webhook();
-        $stripe->run($payment_object);
-      }
+      $this->ipn($payment_object);
     }
 
     $contribution = civicrm_api3('contribution', 'getsingle', array('id' => $this->_contributionID));
@@ -120,36 +93,10 @@ class CRM_Stripe_IpnTest extends CRM_Stripe_BaseTest {
     $this->doPayment($payment_extra_params);
 
     // Now check to see if an event was triggered and if so, process it.
-    // Get all events of the type invoice.payment_succeeded that have 
-    // happened since this code was invoked.
-		$params['created'] = array('gte' => $this->_created_ts);
-    $params['type'] = 'invoice.payment_succeeded';
-    $params['ppid'] = $this->_paymentProcessorID;
-
-		// Now try to retrieve this transaction.
-		$transactions = civicrm_api3('Stripe', 'listevents', $params );		
-    $payment_object = NULL;
-    foreach($transactions['values']['data'] as $transaction) {
-      if ($transaction->data->object->subscription == $this->_subscriptionID) {
-        // This is the one.
-        $payment_object = $transaction;
-        break;
-      }
-    }
+    $payment_object = $this->getEvent('invoice.payment_succeeded'); 
 
     if ($payment_object) {
-      if (class_exists('CRM_Core_Payment_StripeIPN')) {
-        // The $_GET['processor_id'] value is normally set by 
-        // CRM_Core_Payment::handlePaymentMethod
-        $_GET['processor_id'] = $this->_paymentProcessorID;
-        $ipnClass = new CRM_Core_Payment_StripeIPN($payment_object);
-        $ipnClass->main();
-      }
-      else {
-        // Deprecated method.
-        $stripe = new CRM_Stripe_Page_Webhook();
-        $stripe->run($payment_object);
-      }
+      $this->ipn($payment_object);
     }
     $contribution = civicrm_api3('contribution', 'getsingle', array('id' => $this->_contributionID));
     $contribution_status_id = $contribution['contribution_status_id'];
@@ -160,37 +107,60 @@ class CRM_Stripe_IpnTest extends CRM_Stripe_BaseTest {
     $sub = \Stripe\Subscription::retrieve($this->_subscriptionID);
     $sub->cancel();
 
-    $params['sk'] = $this->_sk;
-		$params['created'] = array('gte' => $this->_created_ts);
-    $params['type'] = 'customer.subscription.deleted';
-
-		// Now try to retrieve this transaction.
-		$transactions = civicrm_api3('Stripe', 'listevents', $params );		
-    $sub_object = NULL;
-    foreach($transactions['values']['data'] as $transaction) {
-      if ($transaction->data->object->id == $this->_subscriptionID) {
-        $sub_object = $transaction;
-        break;
-      }
-    }
+    $sub_object = $this->getEvent('customer.subscription.deleted'); 
     if ($sub_object) {
-      if (class_exists('CRM_Core_Payment_StripeIPN')) {
-        // The $_GET['processor_id'] value is normally set by 
-        // CRM_Core_Payment::handlePaymentMethod
-        $_GET['processor_id'] = $this->_paymentProcessorID;
-        $ipnClass = new CRM_Core_Payment_StripeIPN($sub_object);
-        $ipnClass->main();
-      }
-      else {
-        // Deprecated method.
-        $stripe = new CRM_Stripe_Page_Webhook();
-        $stripe->run($sub_object);
-      }
+      $this->ipn($sub_object);
     }
     $contribution_recur = civicrm_api3('contributionrecur', 'getsingle', array('id' => $this->_contributionRecurID));
     $contribution_recur_status_id = $contribution_recur['contribution_status_id'];
     $status = CRM_Contribute_PseudoConstant::contributionStatus($contribution_recur_status_id, 'name');
     $this->assertEquals('Cancelled', $status, "Recurring payment was properly cancelled via a stripe event.");
+  }
+
+  /**
+   * Retrieve the event with a matching subscription id
+   */
+  public function getEvent($type) {
+    if ($type == 'customer.subscription.deleted') {
+      $parameter = 'id';
+    }
+    else {
+      $parameter = 'subscription';
+    }
+    // Gather all events since this class was instantiated.
+    $params['sk'] = $this->_sk;
+		$params['created'] = array('gte' => $this->_created_ts);
+    $params['type'] = $type;
+    $params['ppid'] = $this->_paymentProcessorID;
+
+		// Now try to retrieve this transaction.
+		$transactions = civicrm_api3('Stripe', 'listevents', $params );		
+    foreach($transactions['values']['data'] as $transaction) {
+      if ($transaction->data->object->$parameter == $this->_subscriptionID) {
+        return $transaction;
+      }
+    }
+    return NULL;
+
+  }
+
+  /**
+   * Run the webhook/ipn
+   *
+   */
+  public function ipn($data) {
+    if (class_exists('CRM_Core_Payment_StripeIPN')) {
+      // The $_GET['processor_id'] value is normally set by 
+      // CRM_Core_Payment::handlePaymentMethod
+      $_GET['processor_id'] = $this->_paymentProcessorID;
+      $ipnClass = new CRM_Core_Payment_StripeIPN($data);
+      $ipnClass->main();
+    }
+    else {
+      // Deprecated method.
+      $stripe = new CRM_Stripe_Page_Webhook();
+      $stripe->run($data);
+    }
   }
 
   /**

@@ -42,6 +42,99 @@ class CRM_Stripe_IpnTest extends CRM_Stripe_BaseTest {
     parent::tearDown();
   }
   /**
+   * Test updating a recurring contribution.
+   */
+  public function testIPNRecurUpdate() {
+    $this->setupRecurringTransaction();
+    $payment_extra_params = array(
+      'is_recur' => 1,
+      'contributionRecurID' => $this->_contributionRecurID,
+      'frequency_unit' => $this->_frequency_unit,
+      'frequency_interval' => $this->_frequency_interval,
+      'installments' => $this->_installments
+    );
+    $this->doPayment($payment_extra_params);
+
+    // Now check to see if an event was triggered and if so, process it.
+    $payment_object = $this->getEvent('invoice.payment_succeeded'); 
+    if ($payment_object) {
+      $this->ipn($payment_object);
+    }
+
+    // Now that we have a recurring contribution, let's update it. 
+    \Stripe\Stripe::setApiKey($this->_sk);
+    $sub = \Stripe\Subscription::retrieve($this->_subscriptionID);
+
+    // Create a new plan if it doesn't yet exist.
+    $plan_id = 'every-2-month-40000-usd-test';
+
+    // It's possible that this test plan is still in Stripe, so try to
+    // retrieve it and catch the error triggered if it doesn't exist.
+    try {
+      $plan = \Stripe\Plan::retrieve($plan_id);
+    }
+    catch (Stripe\Error\InvalidRequest $e) {
+      // The plan has not been created yet, so create it.
+      $plan_details = array(
+        'id' => $plan_id,
+        'amount' => '40000',
+        'interval' => 'month',
+        'name' => "Test Updated Plan",
+        'currency' => 'usd',
+        'interval_count' => 2
+      );
+      $plan = \Stripe\Plan::create($plan_details);
+
+    }
+    $sub->plan = $plan_id;
+    $sub->save();
+
+    // Now check to see if an event was triggered and if so, process it.
+    $payment_object = $this->getEvent('customer.subscription.updated'); 
+    if ($payment_object) {
+      $this->ipn($payment_object);
+    }
+
+    // Ensure the old subscription was cancelled.
+    $this->assertContributionRecurIsCancelled();  
+
+    // Check for a new recurring contribution.
+    $params = array(
+      'contact_id' => $this->_contactID,
+      'amount' => '400',
+      'contribution_status_id' => "In Progress",
+      'return' => array('id'),
+    );
+    $result = civicrm_api3('ContributionRecur', 'getsingle', $params);
+    $newContributionRecurID = $result['id']; 
+    
+    // The new one should have a higher id than the old one becuase it's an
+    // auto increment field.
+    $this->assertGreaterThan($this->_contributionRecurID, $newContributionRecurID, "New recurring contribution is created on update.");
+
+    // We should also have a new pending contribution.
+    $params = array(
+      'contribution_recur_id' => $newContributionRecurID,
+      'is_test' => 1,
+      'total_amount' => '400',
+      'contribution_status_id' => 'Pending',
+      'return' => array('id')
+    );
+    $newContributionID = civicrm_api3('Contribution', 'getsingle', $params);
+    $this->assertGreaterThan($this->_contributionID, $newContributionID, "New contribution is created on update of recurring plan.");
+
+    // Ensure the Stripe table is updated.
+    $sql = "SELECT subscription_id FROM civicrm_stripe_subscriptions WHERE
+      contribution_recur_id = %0";
+    $dao = CRM_Core_DAO::executeQuery($sql, array(0 => array($newContributionRecurID, 'Integer')));
+    $dao->fetch();
+    $this->assertEquals(1, $dao->N, "Stripe subscription table is updated on update to recurrig contribution");
+
+    // Delete the new plan so we can cleanly run the next time.
+    $plan->delete();
+  }
+
+  /**
    * Test making a failed recurring contribution.
    */
   public function testIPNRecurFail() {
@@ -111,6 +204,10 @@ class CRM_Stripe_IpnTest extends CRM_Stripe_BaseTest {
     if ($sub_object) {
       $this->ipn($sub_object);
     }
+    $this->assertContributionRecurIsCancelled();  
+  }
+
+  public function assertContributionRecurIsCancelled() {
     $contribution_recur = civicrm_api3('contributionrecur', 'getsingle', array('id' => $this->_contributionRecurID));
     $contribution_recur_status_id = $contribution_recur['contribution_status_id'];
     $status = CRM_Contribute_PseudoConstant::contributionStatus($contribution_recur_status_id, 'name');
@@ -121,11 +218,13 @@ class CRM_Stripe_IpnTest extends CRM_Stripe_BaseTest {
    * Retrieve the event with a matching subscription id
    */
   public function getEvent($type) {
-    if ($type == 'customer.subscription.deleted') {
-      $parameter = 'id';
+    // If the type has subscription in it, then the id is the subscription id
+    if (preg_match('/\.subscription\./', $type)) {
+      $property = 'id';
     }
     else {
-      $parameter = 'subscription';
+      // Otherwise, we'll find the subscription id in the subscription property.
+      $property = 'subscription';
     }
     // Gather all events since this class was instantiated.
     $params['sk'] = $this->_sk;
@@ -136,7 +235,7 @@ class CRM_Stripe_IpnTest extends CRM_Stripe_BaseTest {
 		// Now try to retrieve this transaction.
 		$transactions = civicrm_api3('Stripe', 'listevents', $params );		
     foreach($transactions['values']['data'] as $transaction) {
-      if ($transaction->data->object->$parameter == $this->_subscriptionID) {
+      if ($transaction->data->object->$property == $this->_subscriptionID) {
         return $transaction;
       }
     }

@@ -25,16 +25,20 @@ class CRM_Stripe_BaseTest extends \PHPUnit_Framework_TestCase implements Headles
   protected $_contributionID;
   protected $_invoiceID = 'in_19WvbKAwDouDdbFCkOnSwAN7';
   protected $_financialTypeID = 1;
+  protected $org;
+  protected $_orgID;
+  protected $contact;
   protected $_contactID;
   protected $_contributionPageID;
   protected $_paymentProcessorID;
   protected $_paymentProcessor;
   protected $_trxn_id;
-	protected $_created_ts;
+  protected $_created_ts;
   protected $_subscriptionID;
-	// Secret/public keys are PTP test keys.
-	protected $_sk = 'sk_test_TlGdeoi8e1EOPC3nvcJ4q5UZ';
-	protected $_pk = 'pk_test_k2hELLGpBLsOJr6jZ2z9RaYh';
+  protected $_membershipTypeID;
+  // Secret/public keys are PTP test keys.
+  protected $_sk = 'sk_test_TlGdeoi8e1EOPC3nvcJ4q5UZ';
+  protected $_pk = 'pk_test_k2hELLGpBLsOJr6jZ2z9RaYh';
   protected $_cc = NULL; 
 
   public function setUpHeadless() {
@@ -48,10 +52,10 @@ class CRM_Stripe_BaseTest extends \PHPUnit_Framework_TestCase implements Headles
   public function setUp() {
     parent::setUp();
     require_once('stripe-php/init.php');
- 		$this->createPaymentProcessor();
- 		$this->createContact();
+     $this->createPaymentProcessor();
+     $this->createContact();
     $this->createContributionPage();
-		$this->_created_ts = time();
+    $this->_created_ts = time();
     $this->set_cc();
   }
 
@@ -77,7 +81,7 @@ class CRM_Stripe_BaseTest extends \PHPUnit_Framework_TestCase implements Headles
    * Create contact.
    */
   function createContact() {
-    $this->contact =   $this->contact = \CRM_Core_DAO::createTestObject(
+    $this->contact = \CRM_Core_DAO::createTestObject(
       'CRM_Contact_DAO_Contact', 
       array('contact_type' => 'Individual',)
     );
@@ -96,11 +100,12 @@ class CRM_Stripe_BaseTest extends \PHPUnit_Framework_TestCase implements Headles
 
   }
 
-	/**
+  /**
    * Create a stripe payment processor.
    *
    */
   function createPaymentProcessor($params = array()) {
+    
     $result = civicrm_api3('Stripe', 'setuptest', $params);
     $processor = array_pop($result['values']);
     $this->_sk = $processor['user_name'];
@@ -125,7 +130,7 @@ class CRM_Stripe_BaseTest extends \PHPUnit_Framework_TestCase implements Headles
       'is_email_receipt' => FALSE,  
       ), $params);
     $result = civicrm_api3('ContributionPage', 'create', $params);
-		$this->assertEquals(0, $result['is_error']);
+    $this->assertEquals(0, $result['is_error']);
     $this->_contributionPageID = $result['id']; 
   }
   
@@ -203,7 +208,46 @@ class CRM_Stripe_BaseTest extends \PHPUnit_Framework_TestCase implements Headles
       'payment_processor_id' => $this->_paymentProcessorID,
       'is_test' => 1,
     ), $params));
-		$this->assertEquals(0, $contribution['is_error']);
+    $this->assertEquals(0, $contribution['is_error']);
     $this->_contributionID = $contribution['id'];
   } 
+
+  public function createOrganization() {
+    if (!empty($this->_orgID)) {
+      return;
+    }
+
+    $this->org = \CRM_Core_DAO::createTestObject(
+      'CRM_Contact_DAO_Contact',
+      array('contact_type' => 'Organization',)
+    );
+    $this->_orgID = $this->org->id;
+  }
+
+  public function createMembershipType() {
+    CRM_Member_PseudoConstant::flush('membershipType');
+    CRM_Core_Config::clearDBCache();
+    $this->createOrganization();
+    $params = array( 
+      'name' => 'General',
+      'duration_unit' => 'year',
+      'duration_interval' => 1,
+      'period_type' => 'rolling',
+      'member_of_contact_id' => $this->_orgID,
+      'domain_id' => 1,
+      'financial_type_id' => 2,
+      'is_active' => 1,
+      'sequential' => 1,
+      'visibility' => 'Public',
+    );
+
+    $result = civicrm_api3('MembershipType', 'Create', $params);
+
+    $this->_membershipTypeID = $result['id'];
+
+    CRM_Member_PseudoConstant::flush('membershipType');
+    CRM_Utils_Cache::singleton()->flush();
+  }
+
+  
 }

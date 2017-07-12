@@ -25,6 +25,7 @@ class CRM_Stripe_IpnTest extends CRM_Stripe_BaseTest {
   protected $_installments = 5;
   protected $_frequency_unit = 'month';
   protected $_frequency_interval = 1;
+  protected $_membershipID;
 
   public function setUpHeadless() {
     // Civi\Test has many helpers, like install(), uninstall(), sql(), and sqlFile().
@@ -42,10 +43,26 @@ class CRM_Stripe_IpnTest extends CRM_Stripe_BaseTest {
     parent::tearDown();
   }
   /**
-   * Test updating a recurring contribution.
+   * Test creating a membership related recurring contribution and
+   * update it after creation.
    */
-  public function testIPNRecurUpdate() {
+  public function testIPNRecurMembershipUpdate() {
     $this->setupRecurringTransaction();
+
+    // Create a membership type (this will create the member org too).
+    $this->createMembershipType();
+
+    // Create the membership and link to the recurring contribution.
+    $params = array(
+      'contact_id' => $this->_contactID,
+      'membership_type_id' => $this->_membershipTypeID,
+      'contribution_recur_id' => $this->_contributionRecurID,
+      'format.only_id' => TRUE,
+    );
+    $result = civicrm_api3('membership', 'create', $params);
+
+    $this->_membershipID = $result['id'];
+    // Submit the payment.
     $payment_extra_params = array(
       'is_recur' => 1,
       'contributionRecurID' => $this->_contributionRecurID,
@@ -228,12 +245,12 @@ class CRM_Stripe_IpnTest extends CRM_Stripe_BaseTest {
     }
     // Gather all events since this class was instantiated.
     $params['sk'] = $this->_sk;
-		$params['created'] = array('gte' => $this->_created_ts);
+    $params['created'] = array('gte' => $this->_created_ts);
     $params['type'] = $type;
     $params['ppid'] = $this->_paymentProcessorID;
 
-		// Now try to retrieve this transaction.
-		$transactions = civicrm_api3('Stripe', 'listevents', $params );		
+    // Now try to retrieve this transaction.
+    $transactions = civicrm_api3('Stripe', 'listevents', $params );    
     foreach($transactions['values']['data'] as $transaction) {
       if ($transaction->data->object->$property == $this->_subscriptionID) {
         return $transaction;
@@ -268,7 +285,7 @@ class CRM_Stripe_IpnTest extends CRM_Stripe_BaseTest {
   public function setupRecurringTransaction($params = array()) {
      $contributionRecur = civicrm_api3('contribution_recur', 'create', array_merge(array(
       'financial_type_id' => $this->_financialTypeID,
-      'payment_instrument_id' => CRM_Core_OptionGroup::getValue('payment_instrument', 'Credit Card', 'name'),
+      'payment_instrument_id' => CRM_Core_PseudoConstant::getKey('CRM_Contribute_BAO_ContributionRecur', 'payment_instrument_id', 'Credit Card'),
       'contact_id' => $this->_contactID,
       'amount' => $this->_total,
       'sequential' => 1,
@@ -291,7 +308,7 @@ class CRM_Stripe_IpnTest extends CRM_Stripe_BaseTest {
         'is_test' => 1,
       ),
     ), $params));
-		$this->assertEquals(0, $contributionRecur['is_error']);
+    $this->assertEquals(0, $contributionRecur['is_error']);
     $this->_contributionRecurID = $contributionRecur['id'];
     $this->_contributionID = $contributionRecur['values']['0']['api.contribution.create']['id'];
   } 

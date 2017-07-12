@@ -47,6 +47,11 @@ function civicrm_api3_stripe_Setuptest($params) {
 		'class_name' => 'Payment_Stripe',
 		'billing_mode' => 1
 	);
-  $result = civicrm_api3('PaymentProcessor', 'create', $params);
+  // First see if it already exists.
+  $result = civicrm_api3('PaymentProcessor', 'get', $params);
+  if ($result['count'] != 1) {
+    // Nope, create it.
+    $result = civicrm_api3('PaymentProcessor', 'create', $params);
+  }
   return civicrm_api3_create_success($result['values']);
 }

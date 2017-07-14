@@ -52,8 +52,8 @@ class CRM_Stripe_BaseTest extends \PHPUnit_Framework_TestCase implements Headles
   public function setUp() {
     parent::setUp();
     require_once('stripe-php/init.php');
-     $this->createPaymentProcessor();
-     $this->createContact();
+    $this->createPaymentProcessor();
+    $this->createContact();
     $this->createContributionPage();
     $this->_created_ts = time();
     $this->set_cc();
@@ -81,12 +81,16 @@ class CRM_Stripe_BaseTest extends \PHPUnit_Framework_TestCase implements Headles
    * Create contact.
    */
   function createContact() {
-    $this->contact = \CRM_Core_DAO::createTestObject(
-      'CRM_Contact_DAO_Contact', 
-      array('contact_type' => 'Individual',)
-    );
-    $this->_contactID = $this->contact->id;
-    $this->contact = $this->contact;
+    if (!empty($this->_contactID)) {
+      return;
+    }
+    $results = civicrm_api3('Contact', 'create', array(
+      'contact_type' => 'Individual',
+      'first_name' => 'Jose',
+      'last_name' => 'Lopez'
+    ));;
+    $this->_contactID = $results['id'];
+    $this->contact = (Object) array_pop($results['values']);
 
     // Now we have to add an email address.
     $email = 'susie@example.org';
@@ -96,8 +100,6 @@ class CRM_Stripe_BaseTest extends \PHPUnit_Framework_TestCase implements Headles
       'location_type_id' => 1
     ));
     $this->contact->email = $email;
-
-
   }
 
   /**
@@ -216,12 +218,11 @@ class CRM_Stripe_BaseTest extends \PHPUnit_Framework_TestCase implements Headles
     if (!empty($this->_orgID)) {
       return;
     }
-
-    $this->org = \CRM_Core_DAO::createTestObject(
-      'CRM_Contact_DAO_Contact',
-      array('contact_type' => 'Organization',)
-    );
-    $this->_orgID = $this->org->id;
+    $results = civicrm_api3('Contact', 'create', array(
+      'contact_type' => 'Organization',
+      'organization_name' => 'My Great Group'
+    ));;
+    $this->_orgID = $results['id'];
   }
 
   public function createMembershipType() {

@@ -27,24 +27,18 @@ class CRM_Stripe_IpnTest extends CRM_Stripe_BaseTest {
   protected $_frequency_interval = 1;
   protected $_membershipID;
 
+  // This test is particularly dirty for some reason so we have to 
+  // force a reset.
   public function setUpHeadless() {
-    // Civi\Test has many helpers, like install(), uninstall(), sql(), and sqlFile().
-    // See: https://github.com/civicrm/org.civicrm.testapalooza/blob/master/civi-test.md
+    $force = TRUE;
     return \Civi\Test::headless()
       ->installMe(__DIR__)
-      ->apply();
+      ->apply($force);
   }
 
-  public function setUp() {
-    parent::setUp();
-  }
-
-  public function tearDown() {
-    parent::tearDown();
-  }
   /**
    * Test creating a membership related recurring contribution and
-   * update it after creation.
+   * update it after creation. The membership should also be updated.
    */
   public function testIPNRecurMembershipUpdate() {
     $this->setupRecurringTransaction();
@@ -56,19 +50,23 @@ class CRM_Stripe_IpnTest extends CRM_Stripe_BaseTest {
     $params = array(
       'contact_id' => $this->_contactID,
       'membership_type_id' => $this->_membershipTypeID,
-      'contribution_recur_id' => $this->_contributionRecurID,
-      'format.only_id' => TRUE,
+      'contribution_recur_id' => $this->_contributionRecurID
     );
     $result = civicrm_api3('membership', 'create', $params);
-
     $this->_membershipID = $result['id'];
+    $status = $result['values'][$this->_membershipID]['status_id'];
+    $this->assertEquals(1, $status, 'Membership is in new status');
+
     // Submit the payment.
     $payment_extra_params = array(
       'is_recur' => 1,
       'contributionRecurID' => $this->_contributionRecurID,
       'frequency_unit' => $this->_frequency_unit,
       'frequency_interval' => $this->_frequency_interval,
-      'installments' => $this->_installments
+      'installments' => $this->_installments,
+      'selectMembership' => array(
+        0 => $this->_membershipTypeID
+      )
     );
     $this->doPayment($payment_extra_params);
 
@@ -83,7 +81,7 @@ class CRM_Stripe_IpnTest extends CRM_Stripe_BaseTest {
     $sub = \Stripe\Subscription::retrieve($this->_subscriptionID);
 
     // Create a new plan if it doesn't yet exist.
-    $plan_id = 'every-2-month-40000-usd-test';
+    $plan_id = 'membertype_1-every-2-month-40000-usd-test';
 
     // It's possible that this test plan is still in Stripe, so try to
     // retrieve it and catch the error triggered if it doesn't exist.
@@ -112,9 +110,6 @@ class CRM_Stripe_IpnTest extends CRM_Stripe_BaseTest {
       $this->ipn($payment_object);
     }
 
-    // Ensure the old subscription was cancelled.
-    $this->assertContributionRecurIsCancelled();  
-
     // Check for a new recurring contribution.
     $params = array(
       'contact_id' => $this->_contactID,
@@ -125,30 +120,17 @@ class CRM_Stripe_IpnTest extends CRM_Stripe_BaseTest {
     $result = civicrm_api3('ContributionRecur', 'getsingle', $params);
     $newContributionRecurID = $result['id']; 
     
-    // The new one should have a higher id than the old one becuase it's an
-    // auto increment field.
-    $this->assertGreaterThan($this->_contributionRecurID, $newContributionRecurID, "New recurring contribution is created on update.");
-
-    // We should also have a new pending contribution.
-    $params = array(
-      'contribution_recur_id' => $newContributionRecurID,
-      'is_test' => 1,
-      'total_amount' => '400',
-      'contribution_status_id' => 'Pending',
-      'return' => array('id')
-    );
-    $newContributionID = civicrm_api3('Contribution', 'getsingle', $params);
-    $this->assertGreaterThan($this->_contributionID, $newContributionID, "New contribution is created on update of recurring plan.");
-
-    // Ensure the Stripe table is updated.
-    $sql = "SELECT subscription_id FROM civicrm_stripe_subscriptions WHERE
-      contribution_recur_id = %0";
-    $dao = CRM_Core_DAO::executeQuery($sql, array(0 => array($newContributionRecurID, 'Integer')));
-    $dao->fetch();
-    $this->assertEquals(1, $dao->N, "Stripe subscription table is updated on update to recurrig contribution");
+    // Now ensure that the membership record is updated to have this
+    // new recurring contribution id.
+    $membership_contribution_recur_id = civicrm_api3('Membership', 'getvalue', array(
+      'id' => $this->_membershipID,
+      'return' => 'contribution_recur_id'
+    ));
+    $this->assertEquals($newContributionRecurID, $membership_contribution_recur_id, 'Membership is updated to new contribution recur id');
 
     // Delete the new plan so we can cleanly run the next time.
     $plan->delete();
+    
   }
 
   /**
@@ -283,7 +265,7 @@ class CRM_Stripe_IpnTest extends CRM_Stripe_BaseTest {
    * Create recurring contribition
    */
   public function setupRecurringTransaction($params = array()) {
-     $contributionRecur = civicrm_api3('contribution_recur', 'create', array_merge(array(
+    $contributionRecur = civicrm_api3('contribution_recur', 'create', array_merge(array(
       'financial_type_id' => $this->_financialTypeID,
       'payment_instrument_id' => CRM_Core_PseudoConstant::getKey('CRM_Contribute_BAO_ContributionRecur', 'payment_instrument_id', 'Credit Card'),
       'contact_id' => $this->_contactID,

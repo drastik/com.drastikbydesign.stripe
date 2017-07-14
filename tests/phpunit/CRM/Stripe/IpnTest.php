@@ -154,7 +154,9 @@ class CRM_Stripe_IpnTest extends CRM_Stripe_BaseTest {
     if ($payment_object) {
       // Now manipulate the transaction so it appears to be a failed one.
       $payment_object->type = 'invoice.payment_failed';
-      $this->ipn($payment_object);
+      // Tell Ipn not to verify it - because we manipulated it.
+      $verify = FALSE;
+      $this->ipn($payment_object, $verify);
     }
 
     $contribution = civicrm_api3('contribution', 'getsingle', array('id' => $this->_contributionID));
@@ -246,12 +248,12 @@ class CRM_Stripe_IpnTest extends CRM_Stripe_BaseTest {
    * Run the webhook/ipn
    *
    */
-  public function ipn($data) {
+  public function ipn($data, $verify = TRUE) {
     if (class_exists('CRM_Core_Payment_StripeIPN')) {
       // The $_GET['processor_id'] value is normally set by 
       // CRM_Core_Payment::handlePaymentMethod
       $_GET['processor_id'] = $this->_paymentProcessorID;
-      $ipnClass = new CRM_Core_Payment_StripeIPN($data);
+      $ipnClass = new CRM_Core_Payment_StripeIPN($data, $verify);
       $ipnClass->main();
     }
     else {

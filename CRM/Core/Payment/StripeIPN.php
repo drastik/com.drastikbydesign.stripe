@@ -10,6 +10,10 @@ class CRM_Core_Payment_StripeIPN extends CRM_Core_Payment_BaseIPN {
   var $ppid = NULL;
   var $secret_key = NULL;
   var $is_email_receipt = 1;
+  // By default, always retrieve the event from stripe to ensure we are
+  // not being fed garbage. However, allow an override so when we are 
+  // testing, we can properly test a failed recurring contribution.
+  var $verify_event = TRUE;
 
   // Properties of the event.
   var $test_mode;
@@ -39,7 +43,8 @@ class CRM_Core_Payment_StripeIPN extends CRM_Core_Payment_BaseIPN {
   var $previous_contribution_total_amount = NULL;
   var $previous_completed_contribution_id = NULL;
 
-  public function __construct($inputData) {
+  public function __construct($inputData, $verify = TRUE) {
+    $this->verify_event = $verify;
     $this->setInputParameters($inputData);
     parent::__construct();
   }
@@ -79,11 +84,11 @@ class CRM_Core_Payment_StripeIPN extends CRM_Core_Payment_BaseIPN {
     require_once ("packages/stripe-php/init.php");
     \Stripe\Stripe::setApiKey($this->secret_key);
 
-    $this->_inputParameters = \Stripe\Event::retrieve($parameters->id);
-
-    // Don't send emails while running php unit tests.
-    if (defined('STRIPE_PHPUNIT_TEST')) {
-      $this->is_email_receipt = 0;
+    if ($this->verify_event) {
+      $this->_inputParameters = \Stripe\Event::retrieve($parameters->id);
+    }
+    else {
+      $this->_inputParameters = $parameters;
     }
   }
   /**
@@ -96,14 +101,15 @@ class CRM_Core_Payment_StripeIPN extends CRM_Core_Payment_BaseIPN {
     * @return mixed
    */
   public function retrieve($name, $type, $abort = TRUE) {
-    static $store = NULL;
+
+    $class_name = get_class($this->_inputParameters->data->object);
     $value = NULL;
     switch ($name) {
       case 'subscription_id':
-        if (preg_match('/^invoice/', $this->_inputParameters->type)) {
+        if ($class_name == 'Stripe\Invoice') {
           $value = $this->_inputParameters->data->object->subscription;
         }
-        elseif (preg_match('/^customer\.subscription/', $this->_inputParameters->type)) {
+        elseif ($class_name == 'Stripe\Subscription') {
           $value = $this->_inputParameters->data->object->id;
         }
         break;
@@ -114,51 +120,55 @@ class CRM_Core_Payment_StripeIPN extends CRM_Core_Payment_BaseIPN {
         $value = (int)!$this->_inputParameters->livemode;
         break;
       case 'invoice_id':
-        if (preg_match('/^invoice/', $this->_inputParameters->type)) {
+        if ($class_name == 'Stripe\Invoice') {
           $value = $this->_inputParameters->data->object->id;
         }
         break;
       case 'receive_date':
-        $value = date("Y-m-d H:i:s", $this->_inputParameters->data->object->date);
+        if ($class_name == 'Stripe\Invoice') {
+          $value = date("Y-m-d H:i:s", $this->_inputParameters->data->object->date);
+        }
         break;
       case 'charge_id':
-        $value = $this->_inputParameters->data->object->charge;
+        if ($class_name == 'Stripe\Invoice') {
+          $value = $this->_inputParameters->data->object->charge;
+        }
         break;
       case 'event_type':
         $value = $this->_inputParameters->type;
         break;
       case 'plan_id': 
-        if (property_exists('plan', $this->_inputParameters->data->object)) {
+        if ($class_name == 'Stripe\Subscription') {
           $value = $this->_inputParameters->data->object->plan->id;
         }
         break;
       case 'previous_plan_id':
-        if (property_exists('plan', $this->_inputParameters->data->object)) {
+        if (preg_match('/\.updated$/', $this->_inputParameters->type)) {
           $value = $this->_inputParameters->data->previous_attributes->plan->id;
         }
         break;
       case 'plan_amount':
-        if (property_exists('plan', $this->_inputParameters->data->object)) {
+        if ($class_name == 'Stripe\Subscription') {
           $value = $this->_inputParameters->data->object->plan->amount / 100;
         }
         break;
       case 'frequency_interval':
-        if (property_exists('plan', $this->_inputParameters->data->object)) {
+        if ($class_name == 'Stripe\Subscription') {
           $value = $this->_inputParameters->data->object->plan->interval_count;
         }
         break;
       case 'frequency_unit':
-        if (property_exists('plan', $this->_inputParameters->data->object)) {
+        if ($class_name == 'Stripe\Subscription') {
           $value = $this->_inputParameters->data->object->plan->interval;
         }
         break;
       case 'plan_name':
-        if (property_exists('plan', $this->_inputParameters->data->object)) {
+        if ($class_name == 'Stripe\Subscription') {
           $value = $this->_inputParameters->data->object->plan->name;
         }
         break;
       case 'plan_start':
-        if (property_exists('plan', $this->_inputParameters->data->object)) {
+        if ($class_name == 'Stripe\Subscription') {
           $value = date("Y-m-d H:i:s", $this->_inputParameters->data->object->start);
         }
         break;
@@ -181,7 +191,7 @@ class CRM_Core_Payment_StripeIPN extends CRM_Core_Payment_BaseIPN {
         // If it's not a match, something is wrong (since when we update a plan, we generate a whole
         // new recurring contribution).
         if ($this->previous_contribution_total_amount != $this->amount) {
-          throw new CRM_Core_Exception("Subscription amount mismatch.");
+          throw new CRM_Core_Exception("Subscription amount mismatch. I have " . $this->amount . " and I expect " . $this->previous_contribution_total_amount . ".");
           return FALSE;
         }
 
@@ -341,7 +351,7 @@ class CRM_Core_Payment_StripeIPN extends CRM_Core_Payment_BaseIPN {
           'invoice_id' => $new_civi_invoice,
           'amount' => $this->plan_amount,
           'auto_renew' => 1,
-          'created_date' => $this->plan_date,
+          'created_date' => $this->plan_start,
           'frequency_unit' => $this->frequency_unit,
           'frequency_interval' => $this->frequency_interval,
           'contribution_status_id' => "In Progress",
@@ -369,7 +379,7 @@ class CRM_Core_Payment_StripeIPN extends CRM_Core_Payment_BaseIPN {
 
         // Prepare escaped query params.
         $query_params = array(
-          1 => array($new_recurring_contribution_id, 'Integer'),
+          1 => array($new_contribution_recur_id, 'Integer'),
           2 => array($this->subscription_id, 'String'),
         );
         CRM_Core_DAO::executeQuery("UPDATE civicrm_stripe_subscriptions
@@ -400,7 +410,7 @@ class CRM_Core_Payment_StripeIPN extends CRM_Core_Payment_BaseIPN {
             // Create a new membership payment record.
             $result = civicrm_api3('MembershipPayment', 'create', array(
               'sequential' => 1,
-              'membership_id' => $membership_id,
+              'membership_id' => $this->membership_id,
               'contribution_id' => $new_contribution_id,
             ));
           }
@@ -516,16 +526,13 @@ class CRM_Core_Payment_StripeIPN extends CRM_Core_Payment_BaseIPN {
       }
 
       // Check for membership id.
-      $sql = "
-        SELECT m.id
-        FROM civicrm_membership m INNER JOIN civicrm_membership_payment mp
-          ON m.id = mp.membership_id
-        WHERE m.contribution_recur_id = %1
-        LIMIT 1";
-      $params = array(
-        1 => array($this->contribution_recur_id, 'Integer'),
-      );
-      $this->membership_id = CRM_Core_DAO::singleValueQuery($sql, $params);
+      $membership = civicrm_api3('Membership', 'get', array(
+        'contribution_recur_id' => $this->contribution_recur_id,
+      ));
+      if ($membership['count'] == 1) {
+        $this->membership_id = $membership['id'];
+      }
+
     }
   }
 }

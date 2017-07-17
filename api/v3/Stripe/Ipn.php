@@ -63,10 +63,19 @@ function civicrm_api3_stripe_Ipn($params) {
     \Stripe\Stripe::setApiKey($sk);
     $object = \Stripe\Event::retrieve($params['evtid']);
   }
-
-  $_REQUEST['ppid'] = $ppid;
-  $stripe = new CRM_Stripe_Page_Webhook();
-  $stripe->run($object);
+  if (class_exists('CRM_Core_Payment_StripeIPN')) {
+    // The $_GET['processor_id'] value is normally set by 
+    // CRM_Core_Payment::handlePaymentMethod
+    $_GET['processor_id'] = $ppid;
+    $ipnClass = new CRM_Core_Payment_StripeIPN($object);
+    $ipnClass->main();
+  }
+  else {
+    // Deprecated method.
+    $_REQUEST['ppid'] = $ppid;
+    $stripe = new CRM_Stripe_Page_Webhook();
+    $stripe->run($object);
+  }
   return civicrm_api3_create_success(array());
 
 }

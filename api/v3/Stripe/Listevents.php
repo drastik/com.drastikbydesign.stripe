@@ -21,6 +21,8 @@ function _civicrm_api3_stripe_ListEvents_spec(&$spec) {
   $spec['type']['title'] = ts("Limit to the given Stripe events type");
   $spec['limit']['title'] = ts("Limit number of results returned (100 is max)");
   $spec['starting_after']['title'] = ts("Only return results after this event id.");
+  $spec['output']['default'] = 'json'; 
+  $spec['output']['title'] = ts("How to format the output, brief or full. Defaults to full.");
 }
 
 /**
@@ -223,7 +225,35 @@ function civicrm_api3_stripe_Listevents($params) {
     $err = $data_list['error'];
     throw new API_Exception(/*errorMessage*/ "Stripe returned an error: " . $err->message, /*errorCode*/ $err->type);
   }
-  return civicrm_api3_create_success($data_list);
+  $out = $data_list;
+  if ($params['output'] == 'brief') {
+    $out = array();
+    foreach($data_list['data'] as $data) {
+      $item = array(
+        'id' => $data['id'],
+        'created' => date('Y-m-d H:i:s', $data['created']),
+        'livemode' => $data['livemode'],
+        'pending_webhooks' => $data['pending_webhooks'],
+        'type' => $data['type'],
+      );
+      if (preg_match('/invoice\.payment_/', $data['type'])) {
+        $item['invoice'] = $data['data']['object']->id;
+        $item['charge'] = $data['data']['object']->charge;
+        $item['customer'] = $data['data']['object']->customer;
+        $item['total'] = $data['data']['object']->total;
+
+        // Check if this is in the contributions table.
+        $item['processed'] = 'no';
+        $results = civicrm_api3('Contribution', 'get', array('trxn_id' => $item['charge']));
+        if ($results['count'] > 0) {
+          $item['processed'] = 'yes';
+        }
+      }
+      $out[] = $item;
+    }
+  }
+  return civicrm_api3_create_success($out);
+
 }
 
 

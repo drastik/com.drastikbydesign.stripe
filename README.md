@@ -59,6 +59,7 @@ The api commands are:
   * id - The id from the SystemLog of the event to replay.
   * evtid - The Event ID as provided by Stripe.
   * ppid - Use the given Payment Processor ID. By default, uses the saved, live Stripe payment processor and throws an error if there is more than one.
+  * noreceipt - Set to 1 if you want to suppress the generation of receipts or set to 0 or leave out to send receipts normally.
 
 TESTS
 ------------

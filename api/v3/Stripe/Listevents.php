@@ -240,6 +240,7 @@ function civicrm_api3_stripe_Listevents($params) {
         $item['invoice'] = $data['data']['object']->id;
         $item['charge'] = $data['data']['object']->charge;
         $item['customer'] = $data['data']['object']->customer;
+        $item['subscription'] = $data['data']['object']->subscription;
         $item['total'] = $data['data']['object']->total;
 
         // Check if this is in the contributions table.

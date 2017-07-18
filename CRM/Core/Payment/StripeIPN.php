@@ -488,12 +488,39 @@ class CRM_Core_Payment_StripeIPN extends CRM_Core_Payment_BaseIPN {
       ON s.contribution_recur_id = r.id
       WHERE subscription_id = %1
       AND s.processor_id = %2";
-     $query_params = array(
+    $query_params = array(
       1 => array($this->subscription_id, 'String'),
       2 => array($this->ppid, 'Integer'),
     );
     $dao = CRM_Core_DAO::executeQuery($sql, $query_params);
     $dao->fetch();
+    if ($dao->N == 0 && $this->event_type == 'invoice.payment_succeeded') {
+      // Let's try a little harder - we might have not have properly recorded
+      // the subscription id when this recurring contribution was created.
+      $sql = "SELECT contribution_recur_id,
+        financial_type_id, payment_instrument_id, contact_id
+        FROM civicrm_stripe_subscriptions s JOIN civicrm_contribution_recur r
+        ON s.contribution_recur_id = r.id
+        WHERE customer_id = %1
+        AND s.processor_id = %2";
+      $query_params = array(
+        1 => array($this->customer_id, 'String'),
+        2 => array($this->ppid, 'Integer'),
+      );
+      $extra_dao = CRM_Core_DAO::executeQuery($sql, $query_params);
+      $extra_dao->fetch();
+      if ($extra_dao->N == 1) {
+        // We just found one subscription, so it must be the right one
+        // (if we find more than one subscription we can't be sure).
+        $dao = $extra_dao;
+      }
+      else {
+        // This is an unrecoverable error - without a contribution_recur record
+        // there is nothing we can do with an invoice.payment_succeeded
+        // event.
+        throw new CRM_Core_Exception('I cannot find contribution_recur record for subscription: ' . $this->subscription_id);
+      }
+    }
     if ($dao->N == 1) {
       $this->contribution_recur_id = $dao->contribution_recur_id;
       $this->financial_type_id = $dao->financial_type_id;

@@ -67,8 +67,8 @@ function civicrm_api3_stripe_Ipn($params) {
   }
   // Avoid a SQL error if this one has been processed already.
   $sql = "SELECT COUNT(*) AS count FROM civicrm_contribution WHERE trxn_id = %0";
-  $params = array(0 => array($object->data->object->charge, 'String'));
-  $dao = CRM_Core_DAO::executeQuery($sql, $params);
+  $sql_params = array(0 => array($object->data->object->charge, 'String'));
+  $dao = CRM_Core_DAO::executeQuery($sql, $sql_params);
   $dao->fetch();
   if ($dao->count > 0) {
     return civicrm_api3_create_error("Ipn already processed.");

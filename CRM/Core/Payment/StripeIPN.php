@@ -543,10 +543,10 @@ class CRM_Core_Payment_StripeIPN extends CRM_Core_Payment_BaseIPN {
       try {
         $this->previous_completed_contribution_id = civicrm_api3('contribution', 'getvalue', array(
           'return' => 'id',
-          'contribution_recur_id' => $this->contribution_recur_id_id,
+          'contribution_recur_id' => $this->contribution_recur_id,
           'contribution_status_id' => array('IN' => array('Completed')),
           'options' => array('limit' => 1, 'sort' => 'id DESC'),
-          'contribution_test' => $test_mode,
+          'contribution_test' => $this->test_mode,
         ));
       } catch (Exception $e) {
         // This is fine....could only be a pending in the db.

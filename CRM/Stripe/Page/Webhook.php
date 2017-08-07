@@ -31,7 +31,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
             CRM_Utils_System::civiExit();
           }
         }
-        // Same approach as api repeattransaction. Find last contribution ascociated 
+        // Same approach as api repeattransaction. Find last contribution ascociated
         // with our recurring contribution.
         $recurring_info->previous_contribution_id = civicrm_api3('contribution', 'getvalue', array(
          'return' => 'id',
@@ -84,7 +84,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
       CRM_Utils_System::civiExit();
     }
 
-    // Test mode is the opposite of live mode.  
+    // Test mode is the opposite of live mode.
     $test_mode = (int)!$data->livemode;
 
     $processorId = CRM_Utils_Request::retrieve('ppid', 'Integer');
@@ -112,6 +112,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
     }
 
     require_once ("packages/stripe-php/init.php");
+    \Stripe\Stripe::setAppInfo('CiviCRM', CRM_Utils_System::version(), CRM_Utils_System::baseURL());
     \Stripe\Stripe::setApiKey($stripe_key);
 
     // Retrieve Event from Stripe using ID even though we already have the values now.
@@ -127,8 +128,8 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
         $receive_date = date("Y-m-d H:i:s", $stripe_event_data->data->object->date);
         $charge_id = $stripe_event_data->data->object->charge;
 
-        // Get the Stripe charge object if one exists. Null charge still needs processing. 
-        if ( $charge_id !== null ) { 
+        // Get the Stripe charge object if one exists. Null charge still needs processing.
+        if ( $charge_id !== null ) {
           try {
             $charge = \Stripe\Charge::retrieve($charge_id);
             $balance_transaction_id = $charge->balance_transaction;
@@ -142,7 +143,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
             CRM_Utils_System::civiExit();
           }
         } else {
-        // The customer had a credit on their subscription from a downgrade or gift card. 
+        // The customer had a credit on their subscription from a downgrade or gift card.
         $amount = 0;
         $fee = 0;
         }
@@ -150,7 +151,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
         // First, get the recurring contribution id and previous contribution id.
         $recurring_info = getRecurInfo($subscription_id,$test_mode);
 
-        // Fetch the previous contribution's status. 
+        // Fetch the previous contribution's status.
         $previous_contribution = civicrm_api3('Contribution', 'get', array(
           'sequential' => 1,
           'return' => "contribution_status_id,invoice_id",
@@ -160,16 +161,16 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
         $previous_contribution_status = $previous_contribution['values'][0]['contribution_status_id'];
 
         // Check if the previous contribution's status is pending and update it
-        // using create and then complete it, else repeat it if not pending.  
+        // using create and then complete it, else repeat it if not pending.
         // When a member upgrades/downgrades mid-term, (or recurring contributor
-        // changes levels), we are in a unique situation not knowing ahead of time 
-        // what the contribution amount really is. completetransaction can't modify 
+        // changes levels), we are in a unique situation not knowing ahead of time
+        // what the contribution amount really is. completetransaction can't modify
         // our amounts (except for fee). We'll need to update the contribution amounts
-        // to the actual values from Stripe for accounting. 
-          
-        if ($previous_contribution_status == "2") {	
+        // to the actual values from Stripe for accounting.
+
+        if ($previous_contribution_status == "2") {
           // Note: using create contribution to edit won't recalculate the net_amount.
-          // We need to calculate and explicitly change it. 
+          // We need to calculate and explicitly change it.
           $net_amount = $amount - $fee;
           $pending_contribution = civicrm_api3('Contribution', 'create', array(
            'id' => $recurring_info->previous_contribution_id,
@@ -183,7 +184,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
           if ( $amount == 0 ) {
             $charge_id = $previous_contribution['values'][0]['invoice_id'];
           }
-          // Now complete it. 
+          // Now complete it.
           $result = civicrm_api3('Contribution', 'completetransaction', array(
             'sequential' => 1,
             'id' => $recurring_info->previous_contribution_id,
@@ -197,12 +198,12 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
 
 	 } else {
 
-	 // api contribution repeattransaction repeats the appropriate contribution if it is given 
-	 // simply the recurring contribution id. It also updates the membership for us. However, 
-         // we add the amount and fee regardless of the expected amounts because we may have 
-         // upgraded or downgraded the membership, or recurring contribution level.  This means 
-         // prorated invoices.  
-	 
+	 // api contribution repeattransaction repeats the appropriate contribution if it is given
+	 // simply the recurring contribution id. It also updates the membership for us. However,
+         // we add the amount and fee regardless of the expected amounts because we may have
+         // upgraded or downgraded the membership, or recurring contribution level.  This means
+         // prorated invoices.
+
          $result = civicrm_api3('Contribution', 'repeattransaction', array(
            // Actually, don't use contribution_recur_id until CRM-19945 patches make it in to 4.6/4.7
            // and we have a way to require a minimum minor CiviCRM version.
@@ -215,19 +216,19 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
 	   'fee_amount' => $fee,
 	  //'invoice_id' => $new_invoice_id - contribution.repeattransaction doesn't support it currently
 	   'is_email_receipt' => 1,
-         ));  
- 
+         ));
+
         // Update invoice_id manually. repeattransaction doesn't return the new contrib id either, so we update the db.
         $query_params = array(
           1 => array($new_invoice_id, 'String'),
           2 => array($charge_id, 'String'),
          );
         CRM_Core_DAO::executeQuery("UPDATE civicrm_contribution
-          SET invoice_id = %1 
-          WHERE trxn_id = %2",   
+          SET invoice_id = %1
+          WHERE trxn_id = %2",
          $query_params);
-         
-        
+
+
         // Successful charge & more to come
         $result = civicrm_api3('ContributionRecur', 'create', array(
           'sequential' => 1,
@@ -235,7 +236,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
           'failure_count' => 0,
           'contribution_status_id' => "In Progress"
          ));
-        
+
         CRM_Utils_System::civiExit();
         }
         break;
@@ -264,8 +265,8 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
 
         // First, get the recurring contribution id and previous contribution id.
         $recurring_info = getRecurInfo($subscription_id,$test_mode);
-  
-        // Fetch the previous contribution's status. 
+
+        // Fetch the previous contribution's status.
         $previous_contribution_status = civicrm_api3('Contribution', 'getvalue', array(
           'sequential' => 1,
           'return' => "contribution_status_id",
@@ -274,7 +275,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
          ));
 
           if ($previous_contribution_status == 2) {
-          // If this contribution is Pending, set it to Failed.  
+          // If this contribution is Pending, set it to Failed.
           $result = civicrm_api3('Contribution', 'create', array(
             'id' => $recurring_info->previous_contribution_id,
 	    'contribution_recur_id' => $recurring_info->id,
@@ -285,7 +286,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
             'total_amount' => $amount,
 	    'is_email_receipt' => 1,
 	    'is_test' => $test_mode,
-          ));  
+          ));
 
           }
           else {
@@ -300,7 +301,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
             'total_amount' => $amount,
 	    'is_email_receipt' => 1,
 	    'is_test' => $test_mode,
-          ));  
+          ));
          }
 
           $failure_count = civicrm_api3('ContributionRecur', 'getvalue', array(
@@ -309,7 +310,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
             'return' => 'failure_count',
             ));
           $failure_count++;
-          //  Change the status of the Recurring and update failed attempts. 
+          //  Change the status of the Recurring and update failed attempts.
           $result = civicrm_api3('ContributionRecur', 'create', array(
             'sequential' => 1,
             'id' => $recurring_info->id,
@@ -318,7 +319,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
             'modified_date' => $fail_date,
             'is_test' => $test_mode,
             ));
-          
+
           return;
         break;
 
@@ -368,11 +369,11 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
          $plan_elements = explode("-", $plan_id);
          $plan_name_elements = explode("-", $plan_name);
          $created_date = date("Y-m-d H:i:s", $stripe_event_data->data->object->start);
-         $new_civi_invoice = md5(uniqid(rand(), TRUE)); 
+         $new_civi_invoice = md5(uniqid(rand(), TRUE));
 
          // First, get the recurring contribution id and previous contribution id.
          $recurring_info = getRecurInfo($subscription_id,$test_mode);
-         
+
          // Is there a pending charge due to a subcription change?  Make up your mind!!
          $previous_contribution = civicrm_api3('Contribution', 'get', array(
           'sequential' => 1,
@@ -387,13 +388,13 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
             'id' => $recurring_info->previous_contribution_id,
            ));
          }
-         
+
          // Cancel the old recurring contribution.
          $result = civicrm_api3('ContributionRecur', 'cancel', array(
           'sequential' => 1,
           'id' => $recurring_info->id
          ));
-          
+
          $new_recurring_contribution = civicrm_api3('ContributionRecur', 'create', array(
           'sequential' => 1,
           'contact_id' => $recurring_info->contact_id,
@@ -422,14 +423,14 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
           'note' => "Created by Stripe webhook.",
           'is_test' => $test_mode,
           ));
-   
+
           // Prepare escaped query params.
       $query_params = array(
         1 => array($new_recurring_contribution_id, 'Integer'),
         2 => array($subscription_id, 'String'),
       );
-      CRM_Core_DAO::executeQuery("UPDATE civicrm_stripe_subscriptions 
-        SET contribution_recur_id  = %1 where subscription_id = %2", $query_params); 
+      CRM_Core_DAO::executeQuery("UPDATE civicrm_stripe_subscriptions
+        SET contribution_recur_id  = %1 where subscription_id = %2", $query_params);
 
        // Find out if the plan is ascociated with a membership and if so
        // adjust it to the new level.
@@ -438,7 +439,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
            'sequential' => 1,
            'return' => "membership_type_id,id",
            'contribution_recur_id' => $recurring_info->id,
-          )); 
+          ));
 
           if ("membertype_" == substr($plan_elements[0],0,11)) {
             $new_membership_type_id = substr($plan_elements[0],strrpos($plan_elements[0],'_') + 1);
@@ -465,7 +466,7 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
            'contribution_id' => $new_contribution['values'][0]['id'],
           ));
            }
-           
+
           break;
 
       // Keep plans table in sync with Stripe when a plan is deleted.
@@ -476,9 +477,9 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
           1 => array($plan_id, 'String'),
           2 => array($processorId, 'Integer'),
         );
-       CRM_Core_DAO::executeQuery("DELETE FROM civicrm_stripe_plans WHERE 
+       CRM_Core_DAO::executeQuery("DELETE FROM civicrm_stripe_plans WHERE
          plan_id = %1 AND  processor_id = %2", $query_params);
- 
+
        break;
 
        return;

@@ -212,11 +212,13 @@ function stripe_civicrm_managed(&$entities) {
 function stripe_civicrm_idsException(&$skip) {
   // Handle old method.
   $skip[] = 'civicrm/stripe/webhook';
-  // Handle new method. Get the IDs of the Stripe payment processor.
-  $sql = "SELECT pp.id FROM civicrm_payment_processor pp JOIN civicrm_payment_processor_type
-    pt ON pp.payment_processor_type_id = pt.id AND pt.name = 'Stripe'";
-  $dao = CRM_Core_DAO::executeQuery($sql);
-  while($dao->fetch()) {
-    $skip[] = 'civicrm/payment/ipn/' . $dao->id;
+  $result = civicrm_api3('PaymentProcessor', 'get', array(
+    'sequential' => 1,
+    'return' => "id",
+    'class_name' => "Payment_stripe",
+    'is_active' => 1,
+  ));
+  foreach($result['values'] as $value) {
+    $skip[] = 'civicrm/payment/ipn/' . $value['id'];
   }
 }

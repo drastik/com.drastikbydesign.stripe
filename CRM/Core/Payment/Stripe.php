@@ -279,15 +279,15 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     }
     // Determine if we are dealing with a webform in CiviCRM 4.7.  Those don't have a
     //  _paymentProcessors array and only have one payprocesssor.
-   
+
     // When called from admin backend (forms such as CRM_Financial_Form_Payment, CRM_Contribute_Form_Contribution, CRM_Member_Form_Membership)
     // the isBackOffice flag will be set to true.
-    if (!empty($form->isBackOffice) || (in_array(get_class($form), array('CRM_Financial_Form_Payment')))) {
+    if (!empty($form->isBackOffice)) {
       return $stripe_ppid = $form->_paymentProcessor['id'];
     }
     else {
       // Find a Stripe pay processor ascociated with this Civi form and find the ID.
-   //   $payProcessors = $form->_paymentProcessors;
+      //   $payProcessors = $form->_paymentProcessors;
       $payProcessors = CRM_Core_Form_Stripe::get_ppids($form);
       foreach ($payProcessors as $payProcessor) {
         if ($payProcessor['class_name'] == 'Payment_Stripe') {

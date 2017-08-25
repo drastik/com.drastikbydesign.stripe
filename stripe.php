@@ -203,3 +203,15 @@ function stripe_civicrm_managed(&$entities) {
       }
     }
   }
+
+/**
+ * Add stripe.js to forms, to generate stripe token
+ * @param $formName
+ * @param $form
+ */
+function stripe_civicrm_buildForm($formName, &$form) {
+  if (($formName == 'CRM_Member_Form_MembershipRenewal') && !empty($form->_paymentProcessor['class_name'])) {
+    // civicrm_stripe.js is not included on backend form renewal unless we add it here.
+    CRM_Core_Resources::singleton()->addScriptFile('com.drastikbydesign.stripe', 'js/civicrm_stripe.js');
+  }
+}

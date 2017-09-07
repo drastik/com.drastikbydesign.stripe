@@ -57,6 +57,11 @@ Joshua Walker
 http://drastikbydesign.com  
 https://drupal.org/user/433663  
 
+MAINTAINER INFO
+---------------
+Peter Hartmann
+https://blog.hartmanncomputer.com
+
 OTHER CREDITS
 -------------
 For bug fixes, new features, and documentiation, thanks to:

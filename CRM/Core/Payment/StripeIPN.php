@@ -466,12 +466,19 @@ class CRM_Core_Payment_StripeIPN extends CRM_Core_Payment_BaseIPN {
       try {
         $charge = \Stripe\Charge::retrieve($this->charge_id);
         $balance_transaction_id = $charge->balance_transaction;
-        $balance_transaction = \Stripe\BalanceTransaction::retrieve($balance_transaction_id);
-        $this->amount = $charge->amount / 100;
-        $this->fee = $balance_transaction->fee / 100;
+        // If the transaction is declined, there won't be a balance_transaction_id.
+        if ($balance_transaction_id) {
+          $balance_transaction = \Stripe\BalanceTransaction::retrieve($balance_transaction_id);
+          $this->amount = $charge->amount / 100;
+          $this->fee = $balance_transaction->fee / 100;
+        }
+        else {
+          $this->amount = 0;
+          $this->fee = 0;
+        }
       }
       catch(Exception $e) {
-        throw new CRM_Core_Exception('Cannot get contribution_recur_id from Stripe table.');
+        throw new CRM_Core_Exception('Cannot get contribution amounts from Stripe.');
       }
     } else {
       // The customer had a credit on their subscription from a downgrade or gift card.

@@ -21,7 +21,7 @@ function _civicrm_api3_stripe_ListEvents_spec(&$spec) {
   $spec['type']['title'] = ts("Limit to the given Stripe events type");
   $spec['limit']['title'] = ts("Limit number of results returned (100 is max)");
   $spec['starting_after']['title'] = ts("Only return results after this event id.");
-  $spec['output']['default'] = 'json'; 
+  $spec['output']['api.default'] = 'json';
   $spec['output']['title'] = ts("How to format the output, brief or full. Defaults to full.");
 }
 

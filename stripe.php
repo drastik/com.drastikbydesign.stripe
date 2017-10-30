@@ -203,3 +203,22 @@ function stripe_civicrm_managed(&$entities) {
       }
     }
   }
+
+/*
+ * Implementation of hook_idsException.
+ *
+ * Ensure webhooks don't get caught in the IDS check.
+ */
+function stripe_civicrm_idsException(&$skip) {
+  // Handle old method.
+  $skip[] = 'civicrm/stripe/webhook';
+  $result = civicrm_api3('PaymentProcessor', 'get', array(
+    'sequential' => 1,
+    'return' => "id",
+    'class_name' => "Payment_stripe",
+    'is_active' => 1,
+  ));
+  foreach($result['values'] as $value) {
+    $skip[] = 'civicrm/payment/ipn/' . $value['id'];
+  }
+}

@@ -203,6 +203,9 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       $body = $e->getJsonBody();
       $err = $body['error'];
 
+      if (!array_key_exists('code', $err)) {
+        $err['code'] = null;
+      }
       //$error_message .= 'Status is: ' . $e->getHttpStatus() . "<br />";
       ////$error_message .= 'Param is: ' . $err['param'] . "<br />";
       $error_message .= 'Type: ' . $err['type'] . "<br />";
@@ -820,6 +823,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     //  Don't return a $params['trxn_id'] here or else recurring membership contribs will be set
     //  "Completed" prematurely.  Webhook.php does that.
 
+    $params['subscription_id'] = $subscription_id;
     return $params;
 
   }

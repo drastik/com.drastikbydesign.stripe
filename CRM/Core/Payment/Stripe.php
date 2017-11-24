@@ -819,7 +819,11 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
 
     // update recur processor_id with subscriptionId
     if ($subscription_id && $recuring_contribution_id) {
-      CRM_Core_DAO::setFieldValue('CRM_Contribute_DAO_ContributionRecur', $recuring_contribution_id, 'processor_id', $subscription_id);
+      civicrm_api3('ContributionRecur', 'create', array(
+        'sequential' => 1,
+        'id' => $recuring_contribution_id,
+        'processor_id' => $subscription_id,
+      ));
     }
     //  Don't return a $params['trxn_id'] here or else recurring membership contribs will be set
     //  "Completed" prematurely.  Webhook.php does that.

@@ -855,11 +855,20 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
    */
   public function cancelSubscription(&$message = '', $params = array()) {
     // Include Stripe library then set plugin info and API credentials.
-    require_once('stripe-php/init.php');
-    \Stripe\Stripe::setAppInfo('CiviCRM', CRM_Utils_System::version(), CRM_Utils_System::baseURL());
-    \Stripe\Stripe::setApiKey($this->_paymentProcessor['user_name']);
-    $subscription = \Stripe\Subscription::retrieve($params['subscriptionId']);
-    $subscription->cancel();
+    try {
+      require_once('stripe-php/init.php');
+      \Stripe\Stripe::setAppInfo('CiviCRM', CRM_Utils_System::version(), CRM_Utils_System::baseURL());
+      \Stripe\Stripe::setApiKey($this->_paymentProcessor['user_name']);
+      $subscription = \Stripe\Subscription::retrieve($params['subscriptionId']);
+      $subscription->cancel();
+    }
+    catch (\Stripe\Error\InvalidRequest $e) {
+      // Invalid parameters were supplied to Stripe's API
+      CRM_Core_Error::debug_log_message($e->getMessage());
+    }
+    catch (Exception $e) {
+      CRM_Core_Error::debug_log_message($e->getMessage());
+    }
     return TRUE;
   }
 }

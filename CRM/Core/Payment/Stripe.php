@@ -745,11 +745,15 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
 
     if (!isset($stripe_plan_query)) {
       $formatted_amount = number_format(($amount / 100), 2);
+      $product = \Stripe\Product::create(array(
+        "name" => "CiviCRM {$membership_name} every {$frequency_interval} {$frequency}(s) {$formatted_amount}{$currency}{$mode_tag}",
+        "type" => "service"
+      ));
       // Create a new Plan.
       $stripe_plan = array(
         'amount' => $amount,
         'interval' => $frequency,
-        'name' => "CiviCRM {$membership_name} every {$frequency_interval} {$frequency}(s) {$formatted_amount}{$currency}{$mode_tag}",
+        'product' => $product->id,
         'currency' => $currency,
         'id' => $plan_id,
         'interval_count' => $frequency_interval,

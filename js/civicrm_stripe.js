@@ -151,14 +151,15 @@
       // Hide payment if total is 0 and no more participants.
       if ($('#priceset').length) {
         additionalParticipants = cj("#additional_participants").val();
-        // The currentTotal is already being calculated in Form/Contribution/Main.tpl.
-        if(typeof currentTotal !== 'undefined') {
-          if (currentTotal == 0 && !additionalParticipants) {
-            // This is also hit when "Going back", but we already have stripe_token.
-            debugging('ozlkf');
-            // This should not happen on Confirm Contribution, but seems to on 4.6 for some reason.
-            //return true;
-          }
+        // currentTotal isn't consistent so get fresh calculation.
+        // Only calculate in 4.7 since seems to break 4.6 Confirm Contribution.
+        if (typeof calculateTotalFee === 'function') {
+          totalFee = calculateTotalFee();
+        }
+        if (typeof totalFee !== 'undefined' && totalFee == 0 && !additionalParticipants) {
+          // This is also hit when "Going back", but we already have stripe_token.
+          debugging('ozlkf (Total payment is zero so skip Stripe)');
+          return true;
         }
       }
 

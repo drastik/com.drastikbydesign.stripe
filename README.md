@@ -1,5 +1,8 @@
 CiviCRM Stripe Payment Processor
 --------------------------------
+
+**This version of the CiviCRM Stripe extension is no longer maintained. For the currently maintained version, see https://civicrm.org/extensions/stripe-payment-processor.**
+
 Version 1.8+ of this extension *must* use Stripe's latest API version (at least 2013-12-03).  
 Go to _Account Settings_ -> _API Keys_ tab -> click _Upgrade available_ button.  
 More info on how to change:  https://stripe.com/docs/upgrades#how-can-i-upgrade-my-api  

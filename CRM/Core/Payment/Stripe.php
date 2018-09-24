@@ -820,12 +820,36 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
         (subscription_id, customer_id, contribution_recur_id, processor_id, end_time, is_live)
         VALUES (%1, %2, %3, %4, %5, '{$this->_islive}')", $query_params);
     }
+    // update recur processor_id with subscriptionId
+    CRM_Core_DAO::setFieldValue('CRM_Contribute_DAO_ContributionRecur', $params['contributionRecurID'],
+      'processor_id', $subscription_id
+    );
 
     //  Don't return a $params['trxn_id'] here or else recurring membership contribs will be set
     //  "Completed" prematurely.  Webhook.php does that.
 
     return $params;
 
+  }
+
+  /**
+   * @param string $message
+   * @param array $params
+   *
+   * @return array|bool|object
+   */
+  public function cancelSubscription(&$message = '', $params = array()) {
+    // Include Stripe library then set plugin info and API credentials.
+    require_once('stripe-php/init.php');
+    \Stripe\Stripe::setAppInfo('CiviCRM', CRM_Utils_System::version(), CRM_Utils_System::baseURL());
+    \Stripe\Stripe::setApiKey($this->_paymentProcessor['user_name']);
+
+    if (!empty($params['subscriptionId'])) {
+      $subscription = \Stripe\Subscription::retrieve($params['subscriptionId']);
+      $subscription->cancel();
+      return TRUE;
+    }
+    return FALSE;
   }
 
   /**

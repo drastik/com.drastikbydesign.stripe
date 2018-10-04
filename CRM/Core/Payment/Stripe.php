@@ -237,13 +237,23 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
    * @param $form - reference to the form object
    */
   public function buildForm(&$form) {
-    $stripe_ppid = self::get_stripe_ppid($form);
+    $stripe_ppid = $this->get_stripe_ppid($form);
 
     // Add the ID to our form so our js can tell if Stripe has been selected.
     $form->addElement('hidden', 'stripe_id', $stripe_ppid, array('id' => 'stripe-id'));
 
     $stripe_key = self::stripe_get_key($stripe_ppid);
-    $form->addElement('hidden', 'stripe_pub_key', $stripe_key, array('id' => 'stripe-pub-key'));
+    if (get_class($form) == 'CRM_Financial_Form_Payment') {
+      // This means the user has selected a different payment processor to
+      // an existing form. Don't add a second stripe-pub-key - instead add a
+      // new one that overrides the first
+      $form->addElement('hidden', 'stripe_pub_key_updated', $stripe_key, array('id' => 'stripe-pub-key-updated'));
+      CRM_Core_Error::debug_log_message("Updating public key: $stripe_key");
+    }
+    else {
+      $form->addElement('hidden', 'stripe_pub_key', $stripe_key, array('id' => 'stripe-pub-key'));
+      CRM_Core_Error::debug_log_message("Adding public key: $stripe_key");
+    }
 
     $params = $form->get('params');
     // Contrib forms store this in $params, Event forms in $params[0].
@@ -273,7 +283,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     }
   }
 
- public static function get_stripe_ppid($form) {
+ public function get_stripe_ppid($form) {
     if (empty($form->_paymentProcessor)) {
       return;
     }
@@ -282,15 +292,15 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     if (in_array(get_class($form), array('CRM_Financial_Form_Payment', 'CRM_Contribute_Form_Contribution'))) {
       return $stripe_ppid = $form->_paymentProcessor['id'];
     }
+    elseif (!empty($form->_paymentProcessorID)) {
+      return $form->_paymentProcessorID;
+    }
     else {
       // Find a Stripe pay processor ascociated with this Civi form and find the ID.
-   //   $payProcessors = $form->_paymentProcessors;
-      $payProcessors = CRM_Core_Form_Stripe::get_ppids($form);
-      foreach ($payProcessors as $payProcessor) {
-        if ($payProcessor['class_name'] == 'Payment_Stripe') {
-          return $stripe_ppid = $payProcessor['id'];
-          break;
-        }
+      $stripePayProcessors = CRM_Core_Form_Stripe::get_stripe_ppids($form, $this->_islive);
+      if (count($stripePayProcessors) > 0) {
+        // Return the first one.
+        return $stripePayProcessors[0];
       }
     }
     // None of the payprocessors are Stripe.

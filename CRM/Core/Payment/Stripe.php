@@ -581,6 +581,11 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
     if (CRM_Utils_Array::value('is_recur', $params) && $params['contributionRecurID']) {
       return $this->doRecurPayment($params, $amount, $stripe_customer);
     }
+    
+    // Add meta data for financial type
+    if (CRM_Utils_Array::value('financialType_name', $params)) {
+      $stripe_charge['metadata']['financial_type'] = $params['financialType_name'];
+    }
 
     // Fire away!  Check for errors before trying to submit.
     $stripe_response = $this->stripeCatchErrors('charge', $stripe_charge, $params);

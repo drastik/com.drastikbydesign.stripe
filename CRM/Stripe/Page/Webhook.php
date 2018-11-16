@@ -295,11 +295,19 @@ class CRM_Stripe_Page_Webhook extends CRM_Core_Page {
           else {
           // Record a Failed contribution. Use repeattransaction for this when CRM-19984
           // patch makes it in 4.6/4.7.
+          // use the same payment method as recurring contribution
+          $paymentMethodId = civicrm_api3('ContributionRecur', 'getvalue', [
+              'sequential' => 1,
+              'id' => $recurring_info->id,
+              'return' => "payment_instrument_id",
+            ]
+          );
           $result = civicrm_api3('Contribution', 'create', array(
 	    'contribution_recur_id' => $recurring_info->id,
             'contribution_status_id' => "Failed",
             'contact_id' => $recurring_info->contact_id,
             'financial_type_id' => $recurring_info->financial_type_id,
+            'payment_instrument_id' => $paymentMethodId,
             'receive_date' => $fail_date,
             'total_amount' => $amount,
 	    'is_email_receipt' => 1,

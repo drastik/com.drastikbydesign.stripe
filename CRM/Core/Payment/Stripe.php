@@ -144,7 +144,19 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
           break;
       }
     }
-    catch (Stripe_CardError $e) {
+    catch (Exception $e) {
+      if (is_a($e, 'Stripe_Error')) {
+        foreach ($ignores as $ignore) {
+          if (is_a($e, $ignore['class'])) {
+            $body = $e->getJsonBody();
+            $error = $body['error'];
+            if ($error['type'] == $ignore['type'] && $error['message'] == $ignore['message']) {
+              return $return;
+            }
+          }
+        }
+      }
+
       $this->logStripeException($op, $e);
       $error_message = '';
       // Since it's a decline, Stripe_CardError will be caught
@@ -157,14 +169,16 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
       $error_message .= 'Code: ' . $err['code'] . '<br />';
       $error_message .= 'Message: ' . $err['message'] . '<br />';
 
-      $newnote = civicrm_api3('Note', 'create', array(
-        'sequential' => 1,
-	'entity_id' => $params['contactID'],
-	'contact_id' => $params['contributionID'],
-	'subject' => $err['type'],
-	'note' => $err['code'],
-	'entity_table' => "civicrm_contributions",
-       ));
+      if (is_a($e, 'Stripe_CardError')) {
+        $newnote = civicrm_api3('Note', 'create', array(
+          'sequential' => 1,
+          'entity_id' => $params['contactID'],
+          'contact_id' => $params['contributionID'],
+          'subject' => $err['type'],
+          'note' => $err['code'],
+          'entity_table' => "civicrm_contributions",
+        ));
+      }
 
       if (isset($error_url)) {
       // Redirect to first page of form and present error.
@@ -179,50 +193,7 @@ class CRM_Core_Payment_Stripe extends CRM_Core_Payment {
           $core_err->push($err['code'], 0, NULL, $message);
         }
         else {
-          $core_err->push(9000, 0, NULL, 'Unknown Error');
-        }
-        return $core_err;
-      }
-    }
-    catch (Exception $e) {
-      if (is_a($e, 'Stripe_Error')) {
-        foreach ($ignores as $ignore) {
-          if (is_a($e, $ignore['class'])) {
-            $body = $e->getJsonBody();
-            $error = $body['error'];
-            if ($error['type'] == $ignore['type'] && $error['message'] == $ignore['message']) {
-              return $return;
-            }
-          }
-        }
-        $this->logStripeException($op, $e);
-      }
-      // Something else happened, completely unrelated to Stripe
-      $error_message = '';
-      // Since it's a decline, Stripe_CardError will be caught
-      $body = $e->getJsonBody();
-      $err = $body['error'];
-
-      //$error_message .= 'Status is: ' . $e->getHttpStatus() . "<br />";
-      ////$error_message .= 'Param is: ' . $err['param'] . "<br />";
-      $error_message .= 'Type: ' . $err['type'] . "<br />";
-      $error_message .= 'Code: ' . $err['code'] . "<br />";
-      $error_message .= 'Message: ' . $err['message'] . "<br />";
-
-      if (isset($error_url)) {
-      // Redirect to first page of form and present error.
-      CRM_Core_Error::statusBounce("Oops!  Looks like there was an error.  Payment Response:
-        <br /> {$error_message}", $error_url);
-      }
-      else {
-        // Don't have return url - return error object to api
-        $core_err = CRM_Core_Error::singleton();
-        $message = 'Oops!  Looks like there was an error.  Payment Response: <br />' . $error_message;
-        if ($err['code']) {
-          $core_err->push($err['code'], 0, NULL, $message);
-        }
-        else {
-          $core_err->push(9000, 0, NULL, 'Unknown Error');
+          $core_err->push(9000, 0, NULL, 'Unknown Error: ' . $message);
         }
         return $core_err;
       }
